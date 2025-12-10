@@ -1,0 +1,35 @@
+/* 1. Import 'Outfit' (For Headings) and 'Inter' (For Body) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 2. Apply Global Styles */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: black; /* Prevents white flashes on load */
+  color: white;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 3. Apply Outfit to Headings and Buttons */
+h1, h2, h3, h4, h5, h6, button, .font-brand {
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.02em; /* Tighten letters slightly for that modern look */
+}
+
+/* Custom Scrollbar for Chat */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
