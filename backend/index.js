@@ -28,16 +28,15 @@ const io = new Server(server, {
         // Allow both your local environment and your production site
         origin: [
             "http://localhost:5173",           // Local Frontend
-            "https://guftaguu.vercel.app"      // Your Vercel Frontend (CHECK THIS URL!)
+            "https://guftaguu.vercel.app"      // Your Vercel Frontend
         ],
         methods: ["GET", "POST"]
     }
-
 });
 
-// --- GLOBAL VARIABLES (Must be outside io.on) ---
+// --- GLOBAL VARIABLES ---
 const userRooms = {}; 
-const rpsMoves = {}; // <--- THIS WAS THE FIX
+const rpsMoves = {}; 
 
 io.on('connection', (socket) => {
     console.log(`User Connected: ${socket.id}`);
@@ -73,10 +72,9 @@ io.on('connection', (socket) => {
         await redis.lpush('waiting_queue', socket.id);
     });
 
-    // NEW: Handle Name Exchange
+    // Name Exchange
     socket.on('send_name', (data) => {
         const { roomId, name } = data;
-        // Tell the other person in the room what my name is
         socket.to(roomId).emit('receive_name', name);
     });
 
@@ -98,7 +96,6 @@ io.on('connection', (socket) => {
         if (roomId) {
             socket.to(roomId).emit('partner_disconnected');
             delete userRooms[socket.id];
-            // Clean up RPS moves if they leave mid-game
             delete rpsMoves[roomId]; 
         }
         console.log(`User Disconnected: ${socket.id}`);
@@ -108,7 +105,6 @@ io.on('connection', (socket) => {
     socket.on('request_game', (data) => socket.to(data.roomId).emit('game_requested', data.gameType));
     
     socket.on('accept_game', (data) => {
-        // Clear any old RPS moves for this room when starting new
         delete rpsMoves[data.roomId];
         io.to(data.roomId).emit('game_start', { gameType: data.gameType, starterId: socket.id });
     });
@@ -125,24 +121,21 @@ io.on('connection', (socket) => {
         delete rpsMoves[roomId];
     });
 
-    // --- MOVE LOGIC (Board + RPS) ---
+    // --- MOVE LOGIC ---
     socket.on('make_move', (data) => {
         const { roomId, index, symbol, gameType } = data;
 
-        // 1. BOARD GAMES
         if (gameType !== 'rps') {
             socket.to(roomId).emit('receive_move', { index, symbol });
             return;
         }
 
-        // 2. RPS LOGIC
         if (!rpsMoves[roomId]) rpsMoves[roomId] = {};
-        rpsMoves[roomId][socket.id] = symbol; // Store move
+        rpsMoves[roomId][socket.id] = symbol;
 
         const players = Object.keys(rpsMoves[roomId]);
 
         if (players.length === 2) {
-            // Both moved! Reveal.
             const p1 = players[0];
             const p2 = players[1];
             io.to(roomId).emit('rps_reveal', { 
@@ -151,9 +144,8 @@ io.on('connection', (socket) => {
                     [p2]: rpsMoves[roomId][p2] 
                 } 
             });
-            delete rpsMoves[roomId]; // Reset for next round
+            delete rpsMoves[roomId]; 
         } else {
-            // Waiting for other player
             socket.to(roomId).emit('rps_waiting');
         }
     });
@@ -181,15 +173,12 @@ app.post('/api/report', async (req, res) => {
     }
 });
 
-// Add a simple route for the keep-alive ping
+// Keep-Alive Route
 app.get('/', (req, res) => {
     res.send("Guftaguu Server is Alive!");
 });
 
-server.listen(3001, () => {
-    console.log("SERVER RUNNING ON PORT 3001");
-});
-
+// Start Server (ONLY ONCE)
 server.listen(3001, () => {
     console.log("SERVER RUNNING ON PORT 3001");
 });
