@@ -227,7 +227,7 @@ function ChatInterface({ displayName, onLogout }) {
                 <CatLogo className="w-full h-full" />
             </div>
             <div>
-                <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tighter leading-[1.25] pt-6 bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
+                <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tighter leading-[1.25] pt-6 bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
             </div>
         </div>
         <div className="flex gap-3 items-center">
