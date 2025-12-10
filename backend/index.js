@@ -25,9 +25,15 @@ redis.on('error', (err) => console.error("❌ Redis Error:", err));
 
 const io = new Server(server, {
     cors: {
-        origin: "*",  // Make sure this is "*" (allows everyone)
+        // Allow both your local environment and your production site
+        origin: [
+            "http://localhost:5173",           // Local Frontend
+            "https://guftaguu.vercel.app"      // Your Vercel Frontend (CHECK THIS URL!)
+        ],
         methods: ["GET", "POST"]
-}});
+    }
+
+});
 
 // --- GLOBAL VARIABLES (Must be outside io.on) ---
 const userRooms = {}; 
