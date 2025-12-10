@@ -24,8 +24,10 @@ redis.on('connect', async () => {
 redis.on('error', (err) => console.error("❌ Redis Error:", err));
 
 const io = new Server(server, {
-    cors: { origin: "http://localhost:5173", methods: ["GET", "POST"] }
-});
+    cors: {
+        origin: "*",  // Make sure this is "*" (allows everyone)
+        methods: ["GET", "POST"]
+}});
 
 // --- GLOBAL VARIABLES (Must be outside io.on) ---
 const userRooms = {}; 
