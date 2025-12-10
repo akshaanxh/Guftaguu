@@ -145,13 +145,25 @@ function ChatInterface({ displayName, onLogout }) {
 
   useEffect(() => {
     if (!gameActive || !activeGameType) return;
+    
     let winner = null;
     if (activeGameType === 'tictactoe') winner = checkTicTacToeWinner(board);
     else if (activeGameType === 'connect4') winner = checkConnect4Winner(board);
 
-    if (winner) {
-        setGameWinner(winner);
-        const timer = setTimeout(() => { resetGame(); }, 4000); 
+    // Check for Draw (No winner AND no null spots left on board)
+    const isDraw = !winner && board.length > 0 && !board.includes(null);
+
+    if (winner || isDraw) {
+        setGameWinner(winner || 'draw'); // Pass 'draw' string if tied
+        
+        // Play sound if you have it
+        // if (winner === mySymbol) playSound('win');
+        // else if (winner) playSound('lose');
+        
+        // Close board after 4 seconds
+        const timer = setTimeout(() => { 
+            resetGame(); 
+        }, 4000); 
         return () => clearTimeout(timer);
     }
   }, [board, activeGameType, gameActive]);
