@@ -189,7 +189,7 @@ function ChatInterface({ displayName, onLogout }) {
   };
   const submitReport = async (e) => {
       e.preventDefault(); setIsSendingReport(true);
-      try { await axios.post('http://localhost:3001/api/report', reportData); alert("Sent!"); setShowReportModal(false); } catch (err) { alert("Failed."); } setIsSendingReport(false);
+      try { await axios.post('https://guftaguu-backend.onrender.com/api/report', reportData); alert("Sent!"); setShowReportModal(false); } catch (err) { alert("Failed."); } setIsSendingReport(false);
   };
   const sendGameRequest = (gameType) => { setWaitingForResponse(true); setShowGameSelector(false); getSocket().emit("request_game", { roomId, gameType }); };
   const acceptGame = () => { getSocket().emit("accept_game", { roomId, gameType: incomingRequest }); };
