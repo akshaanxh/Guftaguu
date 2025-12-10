@@ -173,6 +173,15 @@ app.post('/api/report', async (req, res) => {
     }
 });
 
+// Add a simple route for the keep-alive ping
+app.get('/', (req, res) => {
+    res.send("Guftaguu Server is Alive!");
+});
+
+server.listen(3001, () => {
+    console.log("SERVER RUNNING ON PORT 3001");
+});
+
 server.listen(3001, () => {
     console.log("SERVER RUNNING ON PORT 3001");
 });
