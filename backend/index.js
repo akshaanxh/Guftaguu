@@ -178,6 +178,28 @@ app.get('/', (req, res) => {
     res.send("Guftaguu Server is Alive!");
 });
 
+// --- LIVE USER STATS BROADCAST ---
+// Broadcast stats to everyone every 5 seconds
+setInterval(() => {
+    try {
+        // 1. Get total connected sockets
+        const totalUsers = io.engine.clientsCount;
+        
+        // 2. Get users currently in a room (busy)
+        // userRooms keys are socketIDs. One key per busy user.
+        const busyUsers = Object.keys(userRooms).length;
+        
+        // 3. Calculate Idle (Total - Busy)
+        // Ensure it never goes below 0 (just in case)
+        const idleUsers = Math.max(0, totalUsers - busyUsers);
+
+        // 4. Send to everyone
+        io.emit('site_stats', { idle: idleUsers, total: totalUsers });
+    } catch (e) {
+        console.error("Stats Error:", e);
+    }
+}, 5000);
+
 // Start Server (ONLY ONCE)
 server.listen(3001, () => {
     console.log("SERVER RUNNING ON PORT 3001");

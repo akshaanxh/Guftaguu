@@ -20,7 +20,7 @@ const GlassCard = ({ children, className = "" }) => (
     </div>
 );
 
-// 2. Custom Logo Component (Uses your uploaded image)
+// 2. Custom Logo Component
 const CatLogo = ({ className = "w-12 h-12" }) => (
   <img 
     src={logoImage} 
@@ -49,6 +49,8 @@ function ChatInterface({ displayName, onLogout }) {
   const socketRef = useRef();
   const messagesEndRef = useRef(null);
   
+  // State
+  const [idleCount, setIdleCount] = useState(0);
   const [status, setStatus] = useState("idle"); 
   const [roomId, setRoomId] = useState(null);
   const [partnerId, setPartnerId] = useState(null);
@@ -59,6 +61,7 @@ function ChatInterface({ displayName, onLogout }) {
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
 
+  // Game State
   const [activeGameType, setActiveGameType] = useState(null); 
   const [gameActive, setGameActive] = useState(false);
   const [board, setBoard] = useState([]); 
@@ -91,6 +94,11 @@ function ChatInterface({ displayName, onLogout }) {
         setStatus("chatting"); setRoomId(roomId); setPartnerId(partnerId); 
         setMessages([]); resetGame(); setPartnerName(null); 
         socket.emit('send_name', { roomId, name: displayName });
+    });
+
+    // Listen for idle count
+    socket.on('site_stats', (data) => {
+        setIdleCount(data.idle);
     });
 
     socket.on('receive_name', (name) => setPartnerName(name));
@@ -145,25 +153,16 @@ function ChatInterface({ displayName, onLogout }) {
 
   useEffect(() => {
     if (!gameActive || !activeGameType) return;
-    
     let winner = null;
     if (activeGameType === 'tictactoe') winner = checkTicTacToeWinner(board);
     else if (activeGameType === 'connect4') winner = checkConnect4Winner(board);
 
-    // Check for Draw (No winner AND no null spots left on board)
+    // Draw Logic
     const isDraw = !winner && board.length > 0 && !board.includes(null);
 
     if (winner || isDraw) {
-        setGameWinner(winner || 'draw'); // Pass 'draw' string if tied
-        
-        // Play sound if you have it
-        // if (winner === mySymbol) playSound('win');
-        // else if (winner) playSound('lose');
-        
-        // Close board after 4 seconds
-        const timer = setTimeout(() => { 
-            resetGame(); 
-        }, 4000); 
+        setGameWinner(winner || 'draw');
+        const timer = setTimeout(() => { resetGame(); }, 4000); 
         return () => clearTimeout(timer);
     }
   }, [board, activeGameType, gameActive]);
@@ -216,23 +215,36 @@ function ChatInterface({ displayName, onLogout }) {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
+       {/* Background */}
        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
 
+       {/* HEADER */}
        <header className="px-6 py-4 border-b border-white/5 bg-black/50 backdrop-blur-sm flex justify-between items-center z-50">
         <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-tr from-white to-zinc-500 rounded-lg flex items-center justify-center shadow-lg shadow-white/10 p-2">
-                {/* HERE IS YOUR CUSTOM LOGO */}
-                <CatLogo className="w-full h-full" />
-            </div>
+            {/* CLEAN LOGO - NO BOX */}
+            <CatLogo className="w-10 h-10" />
+            
             <div>
-                <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tighter leading-[1.25] pt-6 bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
+                <h1 className="text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">Guftaguu</h1>
+                
+                {/* NEW: ONLINE INDICATOR */}
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">
+                        <span className="text-green-400 font-bold">{idleCount}</span> Online & Waiting
+                    </span>
+                </div>
             </div>
         </div>
+        
         <div className="flex gap-3 items-center">
             <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition">
-                <AlertTriangle size={14} /> Report
+                <AlertTriangle size={14} /> <span className="hidden md:inline">Report</span>
             </button>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 shadow-[0_0_10px_#22c55e]" : "bg-red-500"}`}></div>
@@ -307,46 +319,81 @@ function ChatInterface({ displayName, onLogout }) {
             </div>
         )}
 
+        {/* CHAT & GAME VIEW - MOBILE OPTIMIZED */}
         {(status === "chatting" || isChatEnded) && (
-             <div className="w-full max-w-6xl flex gap-6 h-[80vh] animate-in fade-in zoom-in-95 duration-300">
+             <div className="w-full max-w-6xl flex flex-col md:flex-row gap-4 md:gap-6 h-[92dvh] md:h-[80vh] animate-in fade-in zoom-in-95 duration-300">
+                
+                {/* GAME BOARD */}
                 {gameActive && (
-                    <div className="hidden md:flex flex-col flex-1">
-                        {activeGameType === 'rps' ? <RPSBoard onMove={handleRPSMove} myMove={rpsMyMove} opponentMoved={rpsOpponentMoved} result={rpsResult} /> : <GameBoard gameType={activeGameType} board={board} onMove={handleGameMove} winner={gameWinner} mySymbol={mySymbol} isMyTurn={isMyTurn} statusMessage={statusMessage} />}
+                    <div className="flex flex-col flex-none h-[45%] md:h-auto md:flex-1 min-h-0">
+                        {activeGameType === 'rps' ? (
+                            <RPSBoard onMove={handleRPSMove} myMove={rpsMyMove} opponentMoved={rpsOpponentMoved} result={rpsResult} />
+                        ) : (
+                            <GameBoard gameType={activeGameType} board={board} onMove={handleGameMove} winner={gameWinner} mySymbol={mySymbol} isMyTurn={isMyTurn} statusMessage={statusMessage} />
+                        )}
                     </div>
                 )}
-                <GlassCard className="flex-1 flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
-                         <div className="flex items-center gap-3">
+                
+                {/* CHAT BOX */}
+                <GlassCard className="flex-1 flex flex-col overflow-hidden min-h-0">
+                    <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center bg-black/20 shrink-0">
+                         <div className="flex items-center gap-2 md:gap-3">
                              <div className={`w-2 h-2 rounded-full ${isChatEnded ? "bg-red-500" : "bg-green-500 shadow-[0_0_10px_#22c55e]"}`}></div>
-                             <span className="font-bold text-sm tracking-wide">{isChatEnded ? "Disconnected" : (partnerName || "Stranger")}</span>
+                             <span className="font-bold text-xs md:text-sm tracking-wide truncate max-w-[100px] md:max-w-none">
+                                {isChatEnded ? "Disconnected" : (partnerName || "Stranger")}
+                             </span>
                          </div>
+                         
                          <div className="flex gap-2">
                             {!isChatEnded && !gameActive && (
-                                <button onClick={() => setShowGameSelector(true)} disabled={waitingForResponse} className="p-2 hover:bg-white/10 rounded-full transition text-blue-400" title="Play Game"><Play size={18} /></button>
+                                <button onClick={() => setShowGameSelector(true)} disabled={waitingForResponse} className="p-2 hover:bg-white/10 rounded-full transition text-blue-400" title="Play Game">
+                                    <Play size={18} />
+                                </button>
                             )}
                             {!isChatEnded && (
-                                <button onClick={handleBlock} className="p-2 hover:bg-red-500/20 rounded-full transition text-zinc-500 hover:text-red-500" title="Block User"><Shield size={18} /></button>
+                                <button onClick={handleBlock} className="p-2 hover:bg-red-500/20 rounded-full transition text-zinc-500 hover:text-red-500" title="Block User">
+                                    <Shield size={18} />
+                                </button>
                             )}
-                            <button onClick={handleMainButton} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 ${status === 'chatting' ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-white text-black hover:bg-zinc-200'}`}>{status === 'chatting' ? <><LogOut size={14}/> Stop</> : <><RefreshCw size={14}/> New</>}</button>
+                            <button 
+                                onClick={handleMainButton} 
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${status === 'chatting' ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-white text-black hover:bg-zinc-200'}`}
+                            >
+                                {status === 'chatting' ? <><LogOut size={14}/> <span className="hidden md:inline">Stop</span></> : <><RefreshCw size={14}/> <span className="hidden md:inline">New</span></>}
+                            </button>
                          </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+                    
+                    <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                          {messages.map((msg, index) => (
                             <div key={index} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
-                                <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-sm leading-relaxed ${msg.sender === "me" ? "bg-white text-black rounded-tr-sm" : "bg-zinc-800 text-zinc-100 border border-white/5 rounded-tl-sm"}`}>{msg.text}</div>
+                                <div className={`max-w-[85%] px-4 py-2 md:px-5 md:py-3 rounded-2xl text-sm leading-relaxed ${msg.sender === "me" ? "bg-white text-black rounded-tr-sm" : "bg-zinc-800 text-zinc-100 border border-white/5 rounded-tl-sm"}`}>
+                                    {msg.text}
+                                </div>
                             </div>
                         ))}
                         {isPartnerTyping && <div className="text-xs text-zinc-500 px-2 animate-pulse">typing...</div>}
                         {status === "partner_left" && <div className="flex justify-center mt-6 mb-2"><span className="bg-zinc-800/50 border border-white/5 text-zinc-500 text-xs px-4 py-1 rounded-full">Partner disconnected</span></div>}
                         <div ref={messagesEndRef} />
                     </div>
+
                     {status === "chatting" ? (
-                        <form onSubmit={sendMessage} className="p-4 border-t border-white/10 flex gap-3 bg-black/20">
-                            <input type="text" value={message} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" />
-                            <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50" disabled={!message.trim()}><Play size={20} fill="black" /></button>
+                        <form onSubmit={sendMessage} className="p-3 md:p-4 border-t border-white/10 flex gap-2 md:gap-3 bg-black/20 shrink-0">
+                            <input 
+                                type="text" 
+                                value={message} 
+                                onChange={handleInputChange} 
+                                placeholder="Type a message..." 
+                                className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-base md:text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" 
+                            />
+                            <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50" disabled={!message.trim()}>
+                                <Play size={20} fill="black" />
+                            </button>
                         </form>
                     ) : (
-                         <div className="p-6 border-t border-white/10 flex justify-center bg-black/20"><GlowButton onClick={handleNewMatch} className="w-full">Find New Match</GlowButton></div>
+                         <div className="p-4 md:p-6 border-t border-white/10 flex justify-center bg-black/20 shrink-0">
+                            <GlowButton onClick={handleNewMatch} className="w-full">Find New Match</GlowButton>
+                         </div>
                     )}
                 </GlassCard>
              </div>
@@ -363,7 +410,7 @@ const LegalScreen = ({ onAgree }) => {
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
             
-            {/* LOGO NO BOX */}
+            {/* CLEAN LOGO */}
             <CatLogo className="w-24 h-24 mb-8" />
             
             <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tighter bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
@@ -413,7 +460,7 @@ const NameScreen = ({ onStart }) => {
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
             
             <GlassCard className="w-full max-w-lg p-10 text-center relative z-10">
-                {/* LOGO NO BOX */}
+                {/* CLEAN LOGO */}
                 <CatLogo className="w-20 h-20 mx-auto mb-6" />
                 
                 <h2 className="text-3xl font-bold mb-2 tracking-tight">Welcome</h2>
@@ -449,17 +496,12 @@ const StaticPage = ({ title, content }) => (
         
         <div className="max-w-3xl text-zinc-300 space-y-4">
             {content.split('\n').map((line, index) => {
-                // If line is empty, render a spacer
                 if (!line.trim()) return <br key={index} />;
-                
-                // Split by ** to find bold parts
                 const parts = line.split(/(\*\*.*?\*\*)/g);
-                
                 return (
                     <p key={index} className="leading-relaxed">
                         {parts.map((part, i) => {
                             if (part.startsWith('**') && part.endsWith('**')) {
-                                // Render bold text (remove the **)
                                 return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>;
                             }
                             return part;
