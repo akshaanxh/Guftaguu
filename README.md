@@ -1,6 +1,6 @@
 # 💬 **Guftaguu — _"Chat. Play. Connect."_**
 
-![App Screenshot](./screenshot.png)
+![App Screenshot](./Screenshot.png)
 
 Welcome to **Guftaguu** 👋 — a real-time anonymous chat platform where you can instantly talk to strangers *and* challenge them to built-in multiplayer games.
 
