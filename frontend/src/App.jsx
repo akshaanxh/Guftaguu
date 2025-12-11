@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link } from 'react-router-dom';
-// Icons - Added 'Coffee'
+// Icons
 import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee } from 'lucide-react';
 
 // Import Your Custom Logo
@@ -42,6 +42,64 @@ const GlowButton = ({ onClick, children, disabled, variant = "primary", classNam
         <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}>
             {children}
         </button>
+    );
+};
+
+// --- 🟢 NEW: ADS COMPONENT (SAFE IFRAME METHOD) ---
+// --- 🟢 NEW: ADS COMPONENT (SAFE IFRAME METHOD) ---
+const MatchmakingAd = () => {
+    const bannerRef = useRef(null);
+
+    useEffect(() => {
+        if (!bannerRef.current) return;
+
+        // ==========================================================================================
+        // 👇 ADSTERRA CODE
+        // ==========================================================================================
+        const adCode = `
+            <script type="text/javascript">
+                atOptions = {
+                    'key' : '86303bcac4e9912594f0c0b195678d78',
+                    'format' : 'iframe',
+                    'height' : 250,
+                    'width' : 300,
+                    'params' : {}
+                };
+            </script>
+            <script type="text/javascript" src="//www.highperformanceformat.com/86303bcac4e9912594f0c0b195678d78/invoke.js"></script>
+        `;
+        // ==========================================================================================
+
+        const doc = bannerRef.current.contentWindow.document;
+        doc.open();
+        doc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%; overflow: hidden; background: transparent; }
+                </style>
+            </head>
+            <body>
+                ${adCode}
+            </body>
+            </html>
+        `);
+        doc.close();
+    }, []);
+
+    return (
+        <div className="my-6 mx-auto w-[300px] h-[250px] bg-black/40 border border-white/5 rounded-lg flex items-center justify-center overflow-hidden">
+            <iframe
+                ref={bannerRef}
+                title="Ad"
+                width="300"
+                height="250"
+                scrolling="no"
+                frameBorder="0"
+                style={{ border: 'none', overflow: 'hidden' }}
+            />
+        </div>
     );
 };
 
@@ -113,7 +171,7 @@ function ChatInterface({ displayName, onLogout }) {
   // Modals
   const [showGameSelector, setShowGameSelector] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [showSupportModal, setShowSupportModal] = useState(false); // <--- NEW STATE
+  const [showSupportModal, setShowSupportModal] = useState(false); 
   
   const [reportData, setReportData] = useState({ title: "", description: "", type: "Bug Report" });
   const [isSendingReport, setIsSendingReport] = useState(false);
@@ -279,8 +337,6 @@ function ChatInterface({ displayName, onLogout }) {
                 <h1 className="text-xl md:text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
                     Guftaguu
                 </h1>
-                
-                {/* ONLINE INDICATOR */}
                 <div className="flex items-center gap-2 mt-1">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -294,7 +350,7 @@ function ChatInterface({ displayName, onLogout }) {
         </div>
         
         <div className="flex gap-2 items-center">
-            {/* NEW: SUPPORT BUTTON */}
+            {/* SUPPORT BUTTON */}
             <button onClick={() => setShowSupportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/50 text-xs text-yellow-500 hover:bg-yellow-500 hover:text-black transition font-bold">
                 <Coffee size={14} /> <span className="hidden md:inline">Support</span>
             </button>
@@ -310,10 +366,8 @@ function ChatInterface({ displayName, onLogout }) {
         </div>
       </header>
 
-       {/* SUPPORT MODAL */}
+       {/* MODALS */}
        {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
-
-       {/* REPORT MODAL */}
        {showReportModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
             <GlassCard className="w-full max-w-md p-6">
@@ -375,6 +429,11 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h3 className="text-2xl font-bold animate-pulse">Finding a match...</h3>
+                
+                {/* --- AD GOES HERE --- */}
+                <MatchmakingAd /> 
+                {/* -------------------- */}
+
                 <button onClick={() => setStatus('idle')} className="mt-8 text-zinc-500 hover:text-white underline text-sm">Cancel Search</button>
             </div>
         )}
