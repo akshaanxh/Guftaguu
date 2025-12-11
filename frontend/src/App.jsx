@@ -13,14 +13,12 @@ import { GameBoard, RPSBoard, checkTicTacToeWinner, checkConnect4Winner } from '
 
 // --- VISUAL COMPONENTS ---
 
-// 1. Glass Card
 const GlassCard = ({ children, className = "" }) => (
     <div className={`bg-zinc-900/80 backdrop-blur-md border border-white/10 shadow-2xl rounded-2xl ${className}`}>
         {children}
     </div>
 );
 
-// 2. Custom Logo Component
 const CatLogo = ({ className = "w-12 h-12" }) => (
   <img 
     src={logoImage} 
@@ -29,7 +27,6 @@ const CatLogo = ({ className = "w-12 h-12" }) => (
   />
 );
 
-// 3. Glowing Button
 const GlowButton = ({ onClick, children, disabled, variant = "primary", className="" }) => {
     const baseStyle = "px-6 py-3 rounded-full font-bold transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2";
     const variants = {
@@ -50,7 +47,7 @@ function ChatInterface({ displayName, onLogout }) {
   const messagesEndRef = useRef(null);
   
   // State
-  const [idleCount, setIdleCount] = useState(0);
+  const [idleCount, setIdleCount] = useState(1); // Default to 1 (yourself) so it doesn't show 0
   const [status, setStatus] = useState("idle"); 
   const [roomId, setRoomId] = useState(null);
   const [partnerId, setPartnerId] = useState(null);
@@ -84,6 +81,7 @@ function ChatInterface({ displayName, onLogout }) {
   const getSocket = () => socketRef.current;
 
   useEffect(() => {
+    // Connect to Backend
     socketRef.current = io.connect("https://guftaguu-backend.onrender.com");
     const socket = socketRef.current;
 
@@ -98,7 +96,9 @@ function ChatInterface({ displayName, onLogout }) {
 
     // Listen for idle count
     socket.on('site_stats', (data) => {
-        setIdleCount(data.idle);
+        if (data && typeof data.idle === 'number') {
+            setIdleCount(data.idle);
+        }
     });
 
     socket.on('receive_name', (name) => setPartnerName(name));
@@ -223,13 +223,13 @@ function ChatInterface({ displayName, onLogout }) {
        {/* HEADER */}
        <header className="px-6 py-4 border-b border-white/5 bg-black/50 backdrop-blur-sm flex justify-between items-center z-50">
         <div className="flex items-center gap-4">
-            {/* CLEAN LOGO - NO BOX */}
             <CatLogo className="w-10 h-10" />
-            
             <div>
-                <h1 className="text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">Guftaguu</h1>
+                <h1 className="text-xl md:text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+                    Guftaguu
+                </h1>
                 
-                {/* NEW: ONLINE INDICATOR */}
+                {/* ONLINE INDICATOR */}
                 <div className="flex items-center gap-2 mt-1">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -319,11 +319,9 @@ function ChatInterface({ displayName, onLogout }) {
             </div>
         )}
 
-        {/* CHAT & GAME VIEW - MOBILE OPTIMIZED */}
         {(status === "chatting" || isChatEnded) && (
              <div className="w-full max-w-6xl flex flex-col md:flex-row gap-4 md:gap-6 h-[92dvh] md:h-[80vh] animate-in fade-in zoom-in-95 duration-300">
                 
-                {/* GAME BOARD */}
                 {gameActive && (
                     <div className="flex flex-col flex-none h-[45%] md:h-auto md:flex-1 min-h-0">
                         {activeGameType === 'rps' ? (
@@ -334,7 +332,6 @@ function ChatInterface({ displayName, onLogout }) {
                     </div>
                 )}
                 
-                {/* CHAT BOX */}
                 <GlassCard className="flex-1 flex flex-col overflow-hidden min-h-0">
                     <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center bg-black/20 shrink-0">
                          <div className="flex items-center gap-2 md:gap-3">
@@ -413,7 +410,7 @@ const LegalScreen = ({ onAgree }) => {
             {/* CLEAN LOGO */}
             <CatLogo className="w-24 h-24 mb-8" />
             
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tighter bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tighter bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
             <p className="text-zinc-400 mb-12 text-center max-w-lg">
                 A safe, anonymous space to connect, chat, and play.
             </p>
@@ -565,15 +562,31 @@ Have a suggestion? Use the "Report" button in the app header to send feedback di
 };
 
 function App() {
-    const [step, setStep] = useState('legal'); 
-    const [displayName, setDisplayName] = useState("");
+    // PERSISTENCE FIX: Check local storage on load
+    const savedName = localStorage.getItem("guftaguu_username");
+    
+    // If name exists, go straight to 'chat', else 'legal'
+    const [step, setStep] = useState(savedName ? 'chat' : 'legal');
+    const [displayName, setDisplayName] = useState(savedName || "");
+
+    const handleLogin = (name) => {
+        localStorage.setItem("guftaguu_username", name);
+        setDisplayName(name);
+        setStep('chat');
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem("guftaguu_username");
+        setDisplayName("");
+        setStep('name'); // Go back to name screen on manual exit
+    };
     
     return (
         <Routes>
             <Route path="/" element={
                 step === 'legal' ? <LegalScreen onAgree={() => setStep('name')} /> :
-                step === 'name' ? <NameScreen onStart={(name) => { setDisplayName(name); setStep('chat'); }} /> :
-                <ChatInterface displayName={displayName} onLogout={() => { setStep('name'); setDisplayName(""); }} />
+                step === 'name' ? <NameScreen onStart={handleLogin} /> :
+                <ChatInterface displayName={displayName} onLogout={handleLogout} />
             } />
             
             {/* Pass the content variables here */}
