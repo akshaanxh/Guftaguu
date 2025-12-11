@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee } from 'lucide-react';
+import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users } from 'lucide-react';
 
 // Import Your Custom Logo
 import logoImage from './assets/logo.png'; 
@@ -45,17 +45,14 @@ const GlowButton = ({ onClick, children, disabled, variant = "primary", classNam
     );
 };
 
-// --- 🟢 NEW: ADS COMPONENT (SAFE IFRAME METHOD) ---
-// --- 🟢 NEW: ADS COMPONENT (SAFE IFRAME METHOD) ---
+// --- 🟢 ADSTERRA AD COMPONENT ---
 const MatchmakingAd = () => {
     const bannerRef = useRef(null);
 
     useEffect(() => {
         if (!bannerRef.current) return;
 
-        // ==========================================================================================
-        // 👇 ADSTERRA CODE
-        // ==========================================================================================
+        // YOUR ADSTERRA CODE IS HERE 👇
         const adCode = `
             <script type="text/javascript">
                 atOptions = {
@@ -68,7 +65,6 @@ const MatchmakingAd = () => {
             </script>
             <script type="text/javascript" src="//www.highperformanceformat.com/86303bcac4e9912594f0c0b195678d78/invoke.js"></script>
         `;
-        // ==========================================================================================
 
         const doc = bannerRef.current.contentWindow.document;
         doc.open();
@@ -118,7 +114,6 @@ const SupportModal = ({ onClose }) => (
                 Servers aren't free! If you're having fun, a small contribution helps keep Guftaguu alive.
             </p>
             
-            {/* DYNAMIC QR CODE GENERATOR */}
             <div className="bg-white p-3 rounded-xl mb-4 mx-auto w-48 h-48 shadow-lg shadow-white/5">
                 <img 
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${MY_UPI_ID}&pn=${encodeURIComponent(MY_NAME)}&cu=INR`} 
@@ -142,6 +137,7 @@ function ChatInterface({ displayName, onLogout }) {
   
   // State
   const [idleCount, setIdleCount] = useState(1); 
+  const [busyCount, setBusyCount] = useState(0); // <--- NEW: Track engaged users
   const [status, setStatus] = useState("idle"); 
   const [roomId, setRoomId] = useState(null);
   const [partnerId, setPartnerId] = useState(null);
@@ -191,9 +187,15 @@ function ChatInterface({ displayName, onLogout }) {
         socket.emit('send_name', { roomId, name: displayName });
     });
 
+    // UPDATED: Listen for stats and calculate Busy
     socket.on('site_stats', (data) => {
-        if (data && typeof data.idle === 'number') {
-            setIdleCount(data.idle);
+        if (data) {
+            if (typeof data.idle === 'number') setIdleCount(data.idle);
+            // Calculate Busy: Total - Idle
+            if (typeof data.total === 'number' && typeof data.idle === 'number') {
+                const calculatedBusy = Math.max(0, data.total - data.idle);
+                setBusyCount(calculatedBusy);
+            }
         }
     });
 
@@ -337,14 +339,31 @@ function ChatInterface({ displayName, onLogout }) {
                 <h1 className="text-xl md:text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
                     Guftaguu
                 </h1>
-                <div className="flex items-center gap-2 mt-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">
-                        <span className="text-green-400 font-bold">{idleCount}</span> Online & Waiting
-                    </span>
+                
+                {/* STATUS INDICATORS */}
+                <div className="flex flex-col md:flex-row md:items-center gap-2 mt-1">
+                    {/* ONLINE / WAITING */}
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">
+                            <span className="text-green-400 font-bold">{idleCount}</span> Waiting
+                        </span>
+                    </div>
+
+                    <span className="hidden md:inline text-zinc-700">|</span>
+
+                    {/* ENGAGED / CHATTING */}
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                        <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">
+                            <span className="text-amber-500 font-bold">{busyCount}</span> In Chat
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
