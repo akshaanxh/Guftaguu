@@ -169,6 +169,22 @@ function ChatInterface({ displayName, onLogout }) {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isPartnerTyping]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // Only trigger warning if currently chatting
+      if (status === 'chatting') {
+        e.preventDefault();
+        // This message is standard browser behavior (text might vary by browser)
+        e.returnValue = "Are you sure? You will lose your current chat.";
+        return "Are you sure? You will lose your current chat.";
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [status]);
+
+
   const resetAll = () => { setStatus("idle"); setMessages([]); resetGame(); setPartnerId(null); setPartnerName(null); };
   const resetGame = () => { 
       setGameActive(false); setIncomingRequest(null); setShowGameSelector(false);
