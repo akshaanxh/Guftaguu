@@ -2,14 +2,18 @@ import { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link } from 'react-router-dom';
-// Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText } from 'lucide-react';
+// Icons - Added 'Coffee'
+import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee } from 'lucide-react';
 
 // Import Your Custom Logo
 import logoImage from './assets/logo.png'; 
 
 // Import Game Logic
 import { GameBoard, RPSBoard, checkTicTacToeWinner, checkConnect4Winner } from './components/GameComponents';
+
+// --- CONFIGURATION ---
+const MY_UPI_ID = "akshaanshhh1133@oksbi"; 
+const MY_NAME = "Guftaguu Dev";
 
 // --- VISUAL COMPONENTS ---
 
@@ -41,13 +45,45 @@ const GlowButton = ({ onClick, children, disabled, variant = "primary", classNam
     );
 };
 
+// --- SUPPORT MODAL COMPONENT ---
+const SupportModal = ({ onClose }) => (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-in fade-in duration-200">
+        <GlassCard className="w-full max-w-sm p-6 text-center relative">
+            <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><X size={20}/></button>
+            
+            <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-500">
+                <Coffee size={32} />
+            </div>
+            
+            <h3 className="text-xl font-bold mb-2">Buy me a Chai? ☕</h3>
+            <p className="text-zinc-400 mb-6 text-sm">
+                Servers aren't free! If you're having fun, a small contribution helps keep Guftaguu alive.
+            </p>
+            
+            {/* DYNAMIC QR CODE GENERATOR */}
+            <div className="bg-white p-3 rounded-xl mb-4 mx-auto w-48 h-48 shadow-lg shadow-white/5">
+                <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${MY_UPI_ID}&pn=${encodeURIComponent(MY_NAME)}&cu=INR`} 
+                    alt="UPI QR Code" 
+                    className="w-full h-full object-contain" 
+                />
+            </div>
+            
+            <p className="text-xs text-zinc-500 mb-2">Scan with GPay, Paytm, PhonePe</p>
+            <div className="bg-black/50 border border-white/10 p-2 rounded text-xs font-mono text-zinc-400 select-all">
+                {MY_UPI_ID}
+            </div>
+        </GlassCard>
+    </div>
+);
+
 // --- CHAT INTERFACE ---
 function ChatInterface({ displayName, onLogout }) {
   const socketRef = useRef();
   const messagesEndRef = useRef(null);
   
   // State
-  const [idleCount, setIdleCount] = useState(1); // Default to 1 (yourself) so it doesn't show 0
+  const [idleCount, setIdleCount] = useState(1); 
   const [status, setStatus] = useState("idle"); 
   const [roomId, setRoomId] = useState(null);
   const [partnerId, setPartnerId] = useState(null);
@@ -73,15 +109,18 @@ function ChatInterface({ displayName, onLogout }) {
   const [incomingRequest, setIncomingRequest] = useState(null);
   const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [statusMessage, setStatusMessage] = useState(""); 
+  
+  // Modals
   const [showGameSelector, setShowGameSelector] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false); // <--- NEW STATE
+  
   const [reportData, setReportData] = useState({ title: "", description: "", type: "Bug Report" });
   const [isSendingReport, setIsSendingReport] = useState(false);
 
   const getSocket = () => socketRef.current;
 
   useEffect(() => {
-    // Connect to Backend
     socketRef.current = io.connect("https://guftaguu-backend.onrender.com");
     const socket = socketRef.current;
 
@@ -94,7 +133,6 @@ function ChatInterface({ displayName, onLogout }) {
         socket.emit('send_name', { roomId, name: displayName });
     });
 
-    // Listen for idle count
     socket.on('site_stats', (data) => {
         if (data && typeof data.idle === 'number') {
             setIdleCount(data.idle);
@@ -157,7 +195,6 @@ function ChatInterface({ displayName, onLogout }) {
     if (activeGameType === 'tictactoe') winner = checkTicTacToeWinner(board);
     else if (activeGameType === 'connect4') winner = checkConnect4Winner(board);
 
-    // Draw Logic
     const isDraw = !winner && board.length > 0 && !board.includes(null);
 
     if (winner || isDraw) {
@@ -171,10 +208,8 @@ function ChatInterface({ displayName, onLogout }) {
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      // Only trigger warning if currently chatting
       if (status === 'chatting') {
         e.preventDefault();
-        // This message is standard browser behavior (text might vary by browser)
         e.returnValue = "Are you sure? You will lose your current chat.";
         return "Are you sure? You will lose your current chat.";
       }
@@ -258,11 +293,16 @@ function ChatInterface({ displayName, onLogout }) {
             </div>
         </div>
         
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-2 items-center">
+            {/* NEW: SUPPORT BUTTON */}
+            <button onClick={() => setShowSupportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/50 text-xs text-yellow-500 hover:bg-yellow-500 hover:text-black transition font-bold">
+                <Coffee size={14} /> <span className="hidden md:inline">Support</span>
+            </button>
+
             <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition">
                 <AlertTriangle size={14} /> <span className="hidden md:inline">Report</span>
             </button>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 shadow-[0_0_10px_#22c55e]" : "bg-red-500"}`}></div>
                 <span className={isConnected ? "text-green-500" : "text-red-500"}>{isConnected ? "ONLINE" : "OFFLINE"}</span>
             </div>
@@ -270,6 +310,10 @@ function ChatInterface({ displayName, onLogout }) {
         </div>
       </header>
 
+       {/* SUPPORT MODAL */}
+       {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
+
+       {/* REPORT MODAL */}
        {showReportModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
             <GlassCard className="w-full max-w-md p-6">
@@ -468,6 +512,9 @@ const LegalScreen = ({ onAgree }) => {
 
 const NameScreen = ({ onStart }) => {
     const [name, setName] = useState("");
+    // We need state to show modal here too
+    const [showSupport, setShowSupport] = useState(false);
+
     return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
@@ -476,7 +523,7 @@ const NameScreen = ({ onStart }) => {
                 {/* CLEAN LOGO */}
                 <CatLogo className="w-20 h-20 mx-auto mb-6" />
                 
-                <h2 className="text-3xl font-bold mb-2 tracking-tight">Welcome</h2>
+                <h2 className="text-2xl font-bold mb-2 tracking-tight">Welcome</h2>
                 <p className="text-zinc-400 mb-8">Choose a display name to begin.</p>
                 
                 <input 
@@ -493,11 +540,17 @@ const NameScreen = ({ onStart }) => {
                 </GlowButton>
             </GlassCard>
             
-            <footer className="mt-12 text-xs text-zinc-600 flex gap-6">
+            <footer className="mt-12 text-xs text-zinc-600 flex gap-6 items-center">
                 <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
                 <Link to="/terms" className="hover:text-white transition">Terms</Link>
-                <Link to="/about" className="hover:text-white transition">About</Link>
+                {/* SUPPORT LINK ON HOME SCREEN */}
+                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition flex items-center gap-1 font-bold text-yellow-600/80">
+                    <Coffee size={12}/> Support Dev
+                </button>
             </footer>
+
+            {/* MODAL */}
+            {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
         </div>
     );
 };
