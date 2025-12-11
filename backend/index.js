@@ -73,9 +73,27 @@ io.on('connection', (socket) => {
     });
 
     // Name Exchange
+    // --- SECURE NAME EXCHANGE ---
     socket.on('send_name', (data) => {
         const { roomId, name } = data;
-        socket.to(roomId).emit('receive_name', name);
+        
+        let finalName = name;
+        const lowerName = name.toLowerCase();
+        
+        // 1. YOUR SECRET KEY (Change this to whatever you want!)
+        const MY_SECRET_KEY = "veer117542"; 
+
+        // 2. If the name matches your secret key, become Admin
+        if (name === MY_SECRET_KEY) {
+            finalName = "👑 Admin"; // This is what the other person sees
+        }
+        // 3. If a normal user tries to use "Admin" or "System", block them
+        else if (lowerName.includes("admin") || lowerName.includes("system") || lowerName.includes("mod")) {
+            finalName = "⚠️ Imposter"; // Trolls get this name automatically
+        }
+
+        // Send the filtered name to the partner
+        socket.to(roomId).emit('receive_name', finalName);
     });
 
     socket.on('send_message', (data) => {
