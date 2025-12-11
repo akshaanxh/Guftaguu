@@ -1,4 +1,4 @@
-# 💬 **Guftaguu — _"Chat. Play. Connect."_**
+# 💬 **Guftaguu — _"Anonymous Chat. Real Time Play. No Login Required."_**
 
 ![App Screenshot](./Screenshot.png)
 
@@ -79,39 +79,6 @@ Inside `/backend`, create a `.env` file:
     DISCORD_WEBHOOK_URL=your_discord_webhook_here
     PORT=5000
 
----
-
-## 💻 **Running Locally**
-
-### 1️⃣ Clone the Repo
-
-    git clone https://github.com/YOUR_USERNAME/guftaguu.git
-    cd guftaguu
-
-### 2️⃣ Start the Backend
-
-    cd backend
-    npm install
-    npm start
-
-### 3️⃣ Start the Frontend
-
-    cd frontend
-    npm install
-    npm run dev
-
-Frontend runs at: **http://localhost:5173**  
-Backend runs at: **http://localhost:5000**
-
----
-
-## 📸 **Adding a Screenshot**
-
-Place a `screenshot.png` in your project root and it will show at the top using:
-
-    ![App Screenshot](./screenshot.png)
-
----
 
 ## 📜 **License**
 
