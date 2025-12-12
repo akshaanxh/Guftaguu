@@ -3,8 +3,9 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply, Linkedin } from 'lucide-react';
+import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply, LinkedinIcon } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/react"
+
 // Import Your Custom Logo
 import logoImage from './assets/logo.png'; 
 
@@ -41,7 +42,7 @@ const GlowButton = ({ onClick, children, disabled, variant = "primary", classNam
     );
 };
 
-// --- NEW COMPONENT: SWIPEABLE MESSAGE ---
+// --- SWIPEABLE MESSAGE COMPONENT ---
 const SwipeableMessage = ({ msg, onReply }) => {
     const [touchStart, setTouchStart] = useState(null);
     const [touchEnd, setTouchEnd] = useState(null);
@@ -150,10 +151,7 @@ const SwipeableMessage = ({ msg, onReply }) => {
     );
 };
 
-// --- AD COMPONENT (Disabled) ---
-// const MatchmakingAd = () => { ... }
-
-// --- SUPPORT MODAL (Unchanged) ---
+// --- SUPPORT MODAL ---
 const SupportModal = ({ onClose }) => (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-in fade-in duration-200">
         <GlassCard className="w-full max-w-sm p-6 text-center relative">
@@ -233,7 +231,13 @@ function ChatInterface({ displayName, onLogout }) {
     const socket = socketRef.current;
 
     socket.on('connect', () => setIsConnected(true));
-    socket.on('disconnect', () => { setIsConnected(false); resetAll(); });
+    
+    // --- STICKY CONNECTION FIX ---
+    // If disconnected, just mark offline. DO NOT resetAll().
+    socket.on('disconnect', () => { 
+        setIsConnected(false); 
+        // resetAll();  <-- REMOVED THIS LINE TO PREVENT CRASHING/RESETTING
+    });
 
     socket.on('match_found', ({ roomId, partnerId }) => {
         setStatus("chatting"); setRoomId(roomId); setPartnerId(partnerId); 
@@ -448,7 +452,7 @@ function ChatInterface({ displayName, onLogout }) {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => { getSocket().emit('typing', { roomId, isTyping: false }); }, 1000);
   };
-
+  
   // --- SEND MESSAGE LOGIC ---
   const sendMessage = (e) => {
     e.preventDefault();
@@ -580,6 +584,11 @@ function ChatInterface({ displayName, onLogout }) {
             </div>
         </div>
         <div className="flex gap-2 items-center">
+            {/* LINKEDIN BUTTON (HEADER) */}
+            <a href={MY_LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/50 text-xs text-blue-400 hover:bg-blue-500 hover:text-white transition font-bold">
+                <LinkedinIcon size={14} /> <span className="hidden md:inline">Connect</span>
+            </a>
+
             <button onClick={() => setShowSupportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/50 text-xs text-yellow-500 hover:bg-yellow-500 hover:text-black transition font-bold"><Coffee size={14} /> <span className="hidden md:inline">Support</span></button>
             <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition"><AlertTriangle size={14} /> <span className="hidden md:inline">Report</span></button>
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
@@ -744,6 +753,9 @@ function ChatInterface({ displayName, onLogout }) {
              </div>
         )}
       </main>
+      
+      {/* VERCEL ANALYTICS COMPONENT */}
+      <Analytics />
     </div>
   );
 }
@@ -807,6 +819,12 @@ const NameScreen = ({ onStart }) => {
             <footer className="mt-12 text-xs text-zinc-600 flex gap-6 items-center">
                 <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
                 <Link to="/terms" className="hover:text-white transition">Terms</Link>
+                
+                {/* LINKEDIN BUTTON (FOOTER) - CORRECTED USAGE */}
+                <a href={MY_LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition flex items-center gap-1">
+                    <LinkedinIcon size={12}/> Developer
+                </a>
+                
                 <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition flex items-center gap-1 font-bold text-yellow-600/80"><Coffee size={12}/> Support Dev</button>
             </footer>
             {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
