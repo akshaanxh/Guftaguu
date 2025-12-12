@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
 import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3 } from 'lucide-react';
 
@@ -130,8 +130,13 @@ function ChatInterface({ displayName, onLogout }) {
   const getSocket = () => socketRef.current;
 
   useEffect(() => {
-    socketRef.current = io.connect("http://localhost:3001"); // Point to local for testing
-    socketRef.current = io.connect("https://guftaguu-backend.onrender.com"); // Revert this when deploying
+    // -----------------------------------------------------------------
+    //  DEPLOYMENT URL - Change this line if hosting on Render vs Local
+    // -----------------------------------------------------------------
+    // socketRef.current = io.connect("http://localhost:3001");
+    socketRef.current = io.connect("https://guftaguu-backend.onrender.com");
+    // -----------------------------------------------------------------
+
     const socket = socketRef.current;
 
     socket.on('connect', () => setIsConnected(true));
@@ -192,7 +197,6 @@ function ChatInterface({ displayName, onLogout }) {
             setBoard(prev => {
                 const next = { ...prev };
                 
-                // IMPORTANT FIX: Added brackets so only ONE array updates
                 if (type === 'h') { next.hLines = [...prev.hLines]; next.hLines[i] = true; }
                 if (type === 'v') { next.vLines = [...prev.vLines]; next.vLines[i] = true; }
                 
@@ -211,12 +215,10 @@ function ChatInterface({ displayName, onLogout }) {
                 }
 
                 // Iterate all boxes to update ownership
-                // We use the NEW lines state for checking
                 for(let r=0; r<5; r++){
                     for(let c=0; c<5; c++){
                         const bIdx = r*5+c;
                         if (!newBoxes[bIdx]) {
-                             // Use 'next.hLines'/'next.vLines' if they exist (meaning we updated them), else 'prev'
                              const hLinesToCheck = next.hLines || prev.hLines;
                              const vLinesToCheck = next.vLines || prev.vLines;
                              
@@ -296,7 +298,9 @@ function ChatInterface({ displayName, onLogout }) {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isPartnerTyping]);
 
+  // --- NEW: PREVENT NAVIGATION AND REFRESH ---
   useEffect(() => {
+    // 1. Browser Level (Refresh/Close Tab)
     const handleBeforeUnload = (e) => {
       if (status === 'chatting') {
         e.preventDefault();
@@ -304,8 +308,28 @@ function ChatInterface({ displayName, onLogout }) {
         return "Are you sure? You will lose your current chat.";
       }
     };
+
+    // 2. Mobile/History Level (Back Button)
+    const handlePopState = (e) => {
+       if (status === 'chatting') {
+         // Push state back so they stay on the page
+         window.history.pushState(null, document.title, window.location.href);
+         alert("Please click 'Stop' to end the chat first.");
+       }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Initial push to ensure we have a history entry to trap
+    if (status === 'chatting') {
+        window.history.pushState(null, document.title, window.location.href);
+    }
+
+    return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        window.removeEventListener('popstate', handlePopState);
+    };
   }, [status]);
 
 
@@ -333,7 +357,14 @@ function ChatInterface({ displayName, onLogout }) {
         setMessage(""); getSocket().emit('typing', { roomId, isTyping: false });
     }
   };
-  const handleDisconnectChat = () => { if (!roomId) return; getSocket().emit('leave_room', { roomId }); setStatus("disconnected"); resetGame(); };
+  const handleDisconnectChat = () => { 
+      if (!roomId) return; 
+      getSocket().emit('leave_room', { roomId }); 
+      setStatus("disconnected"); 
+      resetGame(); 
+      // Clear the history trap so they can navigate away now
+      // (Optional, browsers handle this naturally on next interaction)
+  };
   const handleNewMatch = () => { resetAll(); setStatus("searching"); getSocket().emit("find_match"); };
   const handleMainButton = () => { if (status === 'chatting') handleDisconnectChat(); else handleNewMatch(); };
   const handleBlock = () => {
@@ -358,7 +389,6 @@ function ChatInterface({ displayName, onLogout }) {
           setBoard(prev => {
               const next = { ...prev };
               
-              // IMPORTANT FIX: Added brackets so only ONE array updates
               if (type === 'h') { next.hLines = [...prev.hLines]; next.hLines[index] = true; }
               if (type === 'v') { next.vLines = [...prev.vLines]; next.vLines[index] = true; }
 
@@ -373,7 +403,6 @@ function ChatInterface({ displayName, onLogout }) {
                 for(let c=0; c<5; c++){
                     const bIdx = r*5+c;
                     if (!newBoxes[bIdx]) {
-                        // Use updated lines
                         const hLinesToCheck = next.hLines || prev.hLines;
                         const vLinesToCheck = next.vLines || prev.vLines;
                         
@@ -386,7 +415,6 @@ function ChatInterface({ displayName, onLogout }) {
               }
               next.boxes = newBoxes;
               
-              // If I completed a box, I keep my turn. Else, pass it.
               if (boxCompleted) {
                  setIsMyTurn(true);
               } else {
@@ -520,7 +548,7 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h3 className="text-2xl font-bold animate-pulse">Finding a match...</h3>
-                <MatchmakingAd /> 
+                {/*<MatchmakingAd />*/}
                 <button onClick={() => setStatus('idle')} className="mt-8 text-zinc-500 hover:text-white underline text-sm">Cancel Search</button>
             </div>
         )}
