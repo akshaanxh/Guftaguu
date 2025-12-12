@@ -25,10 +25,9 @@ redis.on('error', (err) => console.error("❌ Redis Error:", err));
 
 const io = new Server(server, {
     cors: {
-        // Allow both your local environment and your production site
         origin: [
-            "http://localhost:5173",           // Local Frontend
-            "https://guftaguu.vercel.app"      // Your Vercel Frontend
+            "http://localhost:5173",
+            "https://guftaguu.vercel.app"
         ],
         methods: ["GET", "POST"]
     }
@@ -37,6 +36,7 @@ const io = new Server(server, {
 // --- GLOBAL VARIABLES ---
 const userRooms = {}; 
 const rpsMoves = {}; 
+const reactionState = {}; // Store reaction game state
 
 io.on('connection', (socket) => {
     console.log(`User Connected: ${socket.id}`);
@@ -72,27 +72,15 @@ io.on('connection', (socket) => {
         await redis.lpush('waiting_queue', socket.id);
     });
 
-    // Name Exchange
     // --- SECURE NAME EXCHANGE ---
     socket.on('send_name', (data) => {
         const { roomId, name } = data;
-        
         let finalName = name;
         const lowerName = name.toLowerCase();
-        
-        // 1. YOUR SECRET KEY (Change this to whatever you want!)
         const MY_SECRET_KEY = "veer117542"; 
 
-        // 2. If the name matches your secret key, become Admin
-        if (name === MY_SECRET_KEY) {
-            finalName = "👑 Admin"; // This is what the other person sees
-        }
-        // 3. If a normal user tries to use "Admin" or "System", block them
-        else if (lowerName.includes("admin") || lowerName.includes("system") || lowerName.includes("mod")) {
-            finalName = "⚠️ Imposter"; // Trolls get this name automatically
-        }
-
-        // Send the filtered name to the partner
+        if (name === MY_SECRET_KEY) { finalName = "👑 Admin"; }
+        else if (lowerName.includes("admin") || lowerName.includes("system") || lowerName.includes("mod")) { finalName = "⚠️ Imposter"; }
         socket.to(roomId).emit('receive_name', finalName);
     });
 
@@ -115,6 +103,7 @@ io.on('connection', (socket) => {
             socket.to(roomId).emit('partner_disconnected');
             delete userRooms[socket.id];
             delete rpsMoves[roomId]; 
+            delete reactionState[roomId];
         }
         console.log(`User Disconnected: ${socket.id}`);
     });
@@ -123,8 +112,22 @@ io.on('connection', (socket) => {
     socket.on('request_game', (data) => socket.to(data.roomId).emit('game_requested', data.gameType));
     
     socket.on('accept_game', (data) => {
-        delete rpsMoves[data.roomId];
-        io.to(data.roomId).emit('game_start', { gameType: data.gameType, starterId: socket.id });
+        const { roomId, gameType } = data;
+        delete rpsMoves[roomId];
+        
+        io.to(roomId).emit('game_start', { gameType, starterId: socket.id });
+
+        // REACTION GAME SERVER LOGIC
+        if (gameType === 'reaction') {
+            reactionState[roomId] = { active: false, startTime: 0, winnerDeclared: false };
+            setTimeout(() => {
+                if (io.sockets.adapter.rooms.get(roomId)) {
+                    reactionState[roomId].active = true;
+                    reactionState[roomId].startTime = Date.now();
+                    io.to(roomId).emit('reaction_green_light', Date.now());
+                }
+            }, 5000); 
+        }
     });
     
     socket.on('decline_game', (data) => socket.to(data.roomId).emit('game_declined'));
@@ -137,35 +140,45 @@ io.on('connection', (socket) => {
         socket.leave(roomId);
         delete userRooms[socket.id];
         delete rpsMoves[roomId];
+        delete reactionState[roomId];
     });
 
     // --- MOVE LOGIC ---
     socket.on('make_move', (data) => {
-        const { roomId, index, symbol, gameType } = data;
+        const { roomId, index, symbol, gameType, extraData } = data;
 
-        if (gameType !== 'rps') {
-            socket.to(roomId).emit('receive_move', { index, symbol });
+        if (gameType === 'rps') {
+            if (!rpsMoves[roomId]) rpsMoves[roomId] = {};
+            rpsMoves[roomId][socket.id] = symbol;
+
+            const players = Object.keys(rpsMoves[roomId]);
+            if (players.length === 2) {
+                const p1 = players[0];
+                const p2 = players[1];
+                io.to(roomId).emit('rps_reveal', { moves: { [p1]: rpsMoves[roomId][p1], [p2]: rpsMoves[roomId][p2] } });
+                delete rpsMoves[roomId]; 
+            } else {
+                socket.to(roomId).emit('rps_waiting');
+            }
             return;
         }
 
-        if (!rpsMoves[roomId]) rpsMoves[roomId] = {};
-        rpsMoves[roomId][socket.id] = symbol;
+        if (gameType === 'reaction') {
+            const state = reactionState[roomId];
+            if (!state || state.winnerDeclared) return;
 
-        const players = Object.keys(rpsMoves[roomId]);
-
-        if (players.length === 2) {
-            const p1 = players[0];
-            const p2 = players[1];
-            io.to(roomId).emit('rps_reveal', { 
-                moves: { 
-                    [p1]: rpsMoves[roomId][p1], 
-                    [p2]: rpsMoves[roomId][p2] 
-                } 
-            });
-            delete rpsMoves[roomId]; 
-        } else {
-            socket.to(roomId).emit('rps_waiting');
+            if (state.active) {
+                state.winnerDeclared = true;
+                const reactionTime = Date.now() - state.startTime;
+                io.to(roomId).emit('reaction_result', { winnerId: socket.id, time: reactionTime });
+                delete reactionState[roomId];
+            }
+            return;
         }
+
+        // DOTS & BOXES / TICTACTOE / CONNECT4
+        // Just relay the move to the other player
+        socket.to(roomId).emit('receive_move', { index, symbol, extraData });
     });
 });
 
@@ -191,34 +204,18 @@ app.post('/api/report', async (req, res) => {
     }
 });
 
-// Keep-Alive Route
-app.get('/', (req, res) => {
-    res.send("Guftaguu Server is Alive!");
-});
+app.get('/', (req, res) => { res.send("Guftaguu Server is Alive!"); });
 
-// --- LIVE USER STATS BROADCAST ---
-// Broadcast stats to everyone every 5 seconds
+// Stats Broadcast
 setInterval(() => {
     try {
-        // 1. Get total connected sockets
         const totalUsers = io.engine.clientsCount;
-        
-        // 2. Get users currently in a room (busy)
-        // userRooms keys are socketIDs. One key per busy user.
         const busyUsers = Object.keys(userRooms).length;
-        
-        // 3. Calculate Idle (Total - Busy)
-        // Ensure it never goes below 0 (just in case)
         const idleUsers = Math.max(0, totalUsers - busyUsers);
-
-        // 4. Send to everyone
         io.emit('site_stats', { idle: idleUsers, total: totalUsers });
-    } catch (e) {
-        console.error("Stats Error:", e);
-    }
+    } catch (e) { console.error("Stats Error:", e); }
 }, 5000);
 
-// Start Server (ONLY ONCE)
 server.listen(3001, () => {
     console.log("SERVER RUNNING ON PORT 3001");
 });

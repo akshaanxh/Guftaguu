@@ -3,20 +3,19 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users } from 'lucide-react';
+import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3 } from 'lucide-react';
 
 // Import Your Custom Logo
 import logoImage from './assets/logo.png'; 
 
 // Import Game Logic
-import { GameBoard, RPSBoard, checkTicTacToeWinner, checkConnect4Winner } from './components/GameComponents';
+import { GameBoard, RPSBoard, ReactionBoard, checkTicTacToeWinner, checkConnect4Winner, checkDotsBoxesWinner } from './components/GameComponents';
 
 // --- CONFIGURATION ---
 const MY_UPI_ID = "akshaanshhh1133@oksbi"; 
 const MY_NAME = "Guftaguu Dev";
 
-// --- VISUAL COMPONENTS ---
-
+// --- VISUAL COMPONENTS (Unchanged) ---
 const GlassCard = ({ children, className = "" }) => (
     <div className={`bg-zinc-900/80 backdrop-blur-md border border-white/10 shadow-2xl rounded-2xl ${className}`}>
         {children}
@@ -24,11 +23,7 @@ const GlassCard = ({ children, className = "" }) => (
 );
 
 const CatLogo = ({ className = "w-12 h-12" }) => (
-  <img 
-    src={logoImage} 
-    alt="Guftaguu Logo" 
-    className={`object-contain ${className}`} 
-  />
+  <img src={logoImage} alt="Guftaguu Logo" className={`object-contain ${className}`} />
 );
 
 const GlowButton = ({ onClick, children, disabled, variant = "primary", className="" }) => {
@@ -45,87 +40,42 @@ const GlowButton = ({ onClick, children, disabled, variant = "primary", classNam
     );
 };
 
-// --- 🟢 ADSTERRA AD COMPONENT ---
+// --- AD COMPONENT (Unchanged) ---
 const MatchmakingAd = () => {
     const bannerRef = useRef(null);
-
     useEffect(() => {
         if (!bannerRef.current) return;
-
-        // YOUR ADSTERRA CODE IS HERE 👇
         const adCode = `
             <script type="text/javascript">
-                atOptions = {
-                    'key' : '86303bcac4e9912594f0c0b195678d78',
-                    'format' : 'iframe',
-                    'height' : 250,
-                    'width' : 300,
-                    'params' : {}
-                };
+                atOptions = { 'key' : '86303bcac4e9912594f0c0b195678d78', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };
             </script>
             <script type="text/javascript" src="//www.highperformanceformat.com/86303bcac4e9912594f0c0b195678d78/invoke.js"></script>
         `;
-
         const doc = bannerRef.current.contentWindow.document;
         doc.open();
-        doc.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%; overflow: hidden; background: transparent; }
-                </style>
-            </head>
-            <body>
-                ${adCode}
-            </body>
-            </html>
-        `);
+        doc.write(`<!DOCTYPE html><html><head><style>body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%; overflow: hidden; background: transparent; }</style></head><body>${adCode}</body></html>`);
         doc.close();
     }, []);
-
     return (
         <div className="my-6 mx-auto w-[300px] h-[250px] bg-black/40 border border-white/5 rounded-lg flex items-center justify-center overflow-hidden">
-            <iframe
-                ref={bannerRef}
-                title="Ad"
-                width="300"
-                height="250"
-                scrolling="no"
-                frameBorder="0"
-                style={{ border: 'none', overflow: 'hidden' }}
-            />
+            <iframe ref={bannerRef} title="Ad" width="300" height="250" scrolling="no" frameBorder="0" style={{ border: 'none', overflow: 'hidden' }} />
         </div>
     );
 };
 
-// --- SUPPORT MODAL COMPONENT ---
+// --- SUPPORT MODAL (Unchanged) ---
 const SupportModal = ({ onClose }) => (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-in fade-in duration-200">
         <GlassCard className="w-full max-w-sm p-6 text-center relative">
             <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><X size={20}/></button>
-            
-            <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-500">
-                <Coffee size={32} />
-            </div>
-            
+            <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-500"><Coffee size={32} /></div>
             <h3 className="text-xl font-bold mb-2">Buy me a Chai? ☕</h3>
-            <p className="text-zinc-400 mb-6 text-sm">
-                Servers aren't free! If you're having fun, a small contribution helps keep Guftaguu alive.
-            </p>
-            
+            <p className="text-zinc-400 mb-6 text-sm">Servers aren't free! If you're having fun, a small contribution helps keep Guftaguu alive.</p>
             <div className="bg-white p-3 rounded-xl mb-4 mx-auto w-48 h-48 shadow-lg shadow-white/5">
-                <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${MY_UPI_ID}&pn=${encodeURIComponent(MY_NAME)}&cu=INR`} 
-                    alt="UPI QR Code" 
-                    className="w-full h-full object-contain" 
-                />
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${MY_UPI_ID}&pn=${encodeURIComponent(MY_NAME)}&cu=INR`} alt="UPI QR Code" className="w-full h-full object-contain" />
             </div>
-            
             <p className="text-xs text-zinc-500 mb-2">Scan with GPay, Paytm, PhonePe</p>
-            <div className="bg-black/50 border border-white/10 p-2 rounded text-xs font-mono text-zinc-400 select-all">
-                {MY_UPI_ID}
-            </div>
+            <div className="bg-black/50 border border-white/10 p-2 rounded text-xs font-mono text-zinc-400 select-all">{MY_UPI_ID}</div>
         </GlassCard>
     </div>
 );
@@ -137,7 +87,7 @@ function ChatInterface({ displayName, onLogout }) {
   
   // State
   const [idleCount, setIdleCount] = useState(1); 
-  const [busyCount, setBusyCount] = useState(0); // <--- NEW: Track engaged users
+  const [busyCount, setBusyCount] = useState(0);
   const [status, setStatus] = useState("idle"); 
   const [roomId, setRoomId] = useState(null);
   const [partnerId, setPartnerId] = useState(null);
@@ -156,9 +106,14 @@ function ChatInterface({ displayName, onLogout }) {
   const [mySymbol, setMySymbol] = useState(null); 
   const [gameWinner, setGameWinner] = useState(null);
 
+  // RPS Specific
   const [rpsMyMove, setRpsMyMove] = useState(null);
   const [rpsOpponentMoved, setRpsOpponentMoved] = useState(false);
   const [rpsResult, setRpsResult] = useState(null);
+
+  // Reaction Game Specific
+  const [reactionState, setReactionState] = useState('waiting'); // waiting, ready, result
+  const [reactionResult, setReactionResult] = useState(null);
 
   const [incomingRequest, setIncomingRequest] = useState(null);
   const [waitingForResponse, setWaitingForResponse] = useState(false);
@@ -175,7 +130,8 @@ function ChatInterface({ displayName, onLogout }) {
   const getSocket = () => socketRef.current;
 
   useEffect(() => {
-    socketRef.current = io.connect("https://guftaguu-backend.onrender.com");
+    socketRef.current = io.connect("http://localhost:3001"); // Point to local for testing
+    // socketRef.current = io.connect("https://guftaguu-backend.onrender.com"); // Revert this when deploying
     const socket = socketRef.current;
 
     socket.on('connect', () => setIsConnected(true));
@@ -187,11 +143,9 @@ function ChatInterface({ displayName, onLogout }) {
         socket.emit('send_name', { roomId, name: displayName });
     });
 
-    // UPDATED: Listen for stats and calculate Busy
     socket.on('site_stats', (data) => {
         if (data) {
             if (typeof data.idle === 'number') setIdleCount(data.idle);
-            // Calculate Busy: Total - Idle
             if (typeof data.total === 'number' && typeof data.idle === 'number') {
                 const calculatedBusy = Math.max(0, data.total - data.idle);
                 setBusyCount(calculatedBusy);
@@ -212,10 +166,16 @@ function ChatInterface({ displayName, onLogout }) {
     
     socket.on('game_start', ({ gameType, starterId }) => {
         setGameActive(true); setActiveGameType(gameType);
+        
+        // Init Boards
         if (gameType === 'tictactoe') setBoard(Array(9).fill(null));
         else if (gameType === 'connect4') setBoard(Array(42).fill(null)); 
+        else if (gameType === 'dotsboxes') setBoard({ hLines: Array(30).fill(false), vLines: Array(30).fill(false), boxes: Array(25).fill(null) });
         else if (gameType === 'rps') { setRpsMyMove(null); setRpsOpponentMoved(false); setRpsResult(null); }
+        else if (gameType === 'reaction') { setReactionState('waiting'); setReactionResult(null); }
+
         setIncomingRequest(null); setWaitingForResponse(false); setStatusMessage(""); setGameWinner(null);
+        
         const amIAccepter = socket.id === starterId; 
         if (amIAccepter) { setMySymbol('O'); setIsMyTurn(false); } else { setMySymbol('X'); setIsMyTurn(true); }
     });
@@ -225,9 +185,63 @@ function ChatInterface({ displayName, onLogout }) {
         setTimeout(() => { setStatusMessage(""); }, 2000);
     });
 
-    socket.on('receive_move', ({ index, symbol }) => {
-        setBoard((prev) => { const newBoard = [...prev]; newBoard[index] = symbol; return newBoard; });
-        setIsMyTurn(true);
+    // --- RECEIVE MOVE (Opponent) ---
+    socket.on('receive_move', ({ index, symbol, extraData }) => {
+        if (extraData && extraData.game === 'dotsboxes') {
+            const { type, index: i } = extraData;
+            setBoard(prev => {
+                const next = { ...prev };
+                
+                // IMPORTANT FIX: Added brackets so only ONE array updates
+                if (type === 'h') { next.hLines = [...prev.hLines]; next.hLines[i] = true; }
+                if (type === 'v') { next.vLines = [...prev.vLines]; next.vLines[i] = true; }
+                
+                // CHECK FOR BOX COMPLETION (Logic replicated on both clients)
+                const newBoxes = [...prev.boxes];
+                let boxCompleted = false;
+
+                // Helper to check a specific box index r,c
+                const isBoxFull = (r, c, h, v) => {
+                    if (r<0 || r>=5 || c<0 || c>=5) return false;
+                    const hTop = h[r*5+c];
+                    const hBot = h[(r+1)*5+c];
+                    const vLeft = v[r*6+c];
+                    const vRight = v[r*6+c+1];
+                    return hTop && hBot && vLeft && vRight;
+                }
+
+                // Iterate all boxes to update ownership
+                // We use the NEW lines state for checking
+                for(let r=0; r<5; r++){
+                    for(let c=0; c<5; c++){
+                        const bIdx = r*5+c;
+                        if (!newBoxes[bIdx]) {
+                             // Use 'next.hLines'/'next.vLines' if they exist (meaning we updated them), else 'prev'
+                             const hLinesToCheck = next.hLines || prev.hLines;
+                             const vLinesToCheck = next.vLines || prev.vLines;
+                             
+                             if (isBoxFull(r, c, hLinesToCheck, vLinesToCheck)) {
+                                newBoxes[bIdx] = symbol; // Opponent got this box
+                                boxCompleted = true;
+                            }
+                        }
+                    }
+                }
+                next.boxes = newBoxes;
+                
+                // If opponent completed a box, they keep turn. I do NOT get turn.
+                if (boxCompleted) {
+                    setIsMyTurn(false);
+                } else {
+                    setIsMyTurn(true);
+                }
+                return next;
+            });
+        } else {
+            // Standard TicTacToe/Connect4
+            setBoard((prev) => { const newBoard = [...prev]; newBoard[index] = symbol; return newBoard; });
+            setIsMyTurn(true);
+        }
     });
 
     socket.on('rps_waiting', () => setRpsOpponentMoved(true));
@@ -246,16 +260,32 @@ function ChatInterface({ displayName, onLogout }) {
         setTimeout(() => { resetGame(); }, 4000);
     });
 
+    // Reaction Game Events
+    socket.on('reaction_green_light', () => {
+        setReactionState('ready');
+    });
+    
+    socket.on('reaction_result', ({ winnerId, time }) => {
+        const winner = winnerId === socket.id ? 'me' : 'opponent';
+        setReactionResult({ winner, time });
+        setTimeout(() => { resetGame(); }, 4000);
+    });
+
     return () => socket.disconnect();
   }, []);
 
+  // WIN CHECKER HOOK
   useEffect(() => {
     if (!gameActive || !activeGameType) return;
     let winner = null;
+    
     if (activeGameType === 'tictactoe') winner = checkTicTacToeWinner(board);
     else if (activeGameType === 'connect4') winner = checkConnect4Winner(board);
+    else if (activeGameType === 'dotsboxes') winner = checkDotsBoxesWinner(board);
 
-    const isDraw = !winner && board.length > 0 && !board.includes(null);
+    // TicTacToe/Connect4 Draw Check
+    let isDraw = false;
+    if (activeGameType !== 'dotsboxes' && Array.isArray(board) && !winner && board.length > 0 && !board.includes(null)) isDraw = true;
 
     if (winner || isDraw) {
         setGameWinner(winner || 'draw');
@@ -274,7 +304,6 @@ function ChatInterface({ displayName, onLogout }) {
         return "Are you sure? You will lose your current chat.";
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [status]);
@@ -284,7 +313,9 @@ function ChatInterface({ displayName, onLogout }) {
   const resetGame = () => { 
       setGameActive(false); setIncomingRequest(null); setShowGameSelector(false);
       setWaitingForResponse(false); setBoard([]); setStatusMessage(""); setGameWinner(null);
-      setRpsMyMove(null); setRpsOpponentMoved(false); setRpsResult(null); setActiveGameType(null);
+      setRpsMyMove(null); setRpsOpponentMoved(false); setRpsResult(null); 
+      setReactionResult(null); setReactionState('waiting');
+      setActiveGameType(null);
   };
 
   const handleStartChat = () => { setStatus("searching"); getSocket().emit("find_match"); };
@@ -316,11 +347,71 @@ function ChatInterface({ displayName, onLogout }) {
   const sendGameRequest = (gameType) => { setWaitingForResponse(true); setShowGameSelector(false); getSocket().emit("request_game", { roomId, gameType }); };
   const acceptGame = () => { getSocket().emit("accept_game", { roomId, gameType: incomingRequest }); };
   const declineGame = () => { setIncomingRequest(null); getSocket().emit("decline_game", { roomId }); };
-  const handleGameMove = (index) => {
-      const newBoard = [...board]; newBoard[index] = mySymbol; setBoard(newBoard); setIsMyTurn(false);
-      getSocket().emit("make_move", { roomId, index, symbol: mySymbol });
+  
+  // --- GENERAL MOVE HANDLER (My Move) ---
+  const handleGameMove = (indexOrData) => {
+      if (activeGameType === 'dotsboxes') {
+          // Dots & Boxes Logic (Local update first)
+          const { type, index } = indexOrData;
+          let boxCompleted = false;
+
+          setBoard(prev => {
+              const next = { ...prev };
+              
+              // IMPORTANT FIX: Added brackets so only ONE array updates
+              if (type === 'h') { next.hLines = [...prev.hLines]; next.hLines[index] = true; }
+              if (type === 'v') { next.vLines = [...prev.vLines]; next.vLines[index] = true; }
+
+              // Check if THIS specific move completed a box for ME
+              const newBoxes = [...prev.boxes];
+              const isBoxFull = (r, c, h, v) => {
+                if (r<0 || r>=5 || c<0 || c>=5) return false;
+                return h[r*5+c] && h[(r+1)*5+c] && v[r*6+c] && v[r*6+c+1];
+              }
+
+              for(let r=0; r<5; r++){
+                for(let c=0; c<5; c++){
+                    const bIdx = r*5+c;
+                    if (!newBoxes[bIdx]) {
+                        // Use updated lines
+                        const hLinesToCheck = next.hLines || prev.hLines;
+                        const vLinesToCheck = next.vLines || prev.vLines;
+                        
+                        if (isBoxFull(r, c, hLinesToCheck, vLinesToCheck)) {
+                            newBoxes[bIdx] = mySymbol; 
+                            boxCompleted = true;
+                        }
+                    }
+                }
+              }
+              next.boxes = newBoxes;
+              
+              // If I completed a box, I keep my turn. Else, pass it.
+              if (boxCompleted) {
+                 setIsMyTurn(true);
+              } else {
+                 setIsMyTurn(false);
+              }
+
+              return next;
+          });
+          
+          getSocket().emit("make_move", { roomId, index: 0, symbol: mySymbol, gameType: 'dotsboxes', extraData: { game: 'dotsboxes', type, index } });
+
+      } else {
+          // TicTacToe / Connect 4
+          const newBoard = [...board]; newBoard[indexOrData] = mySymbol; setBoard(newBoard); setIsMyTurn(false);
+          getSocket().emit("make_move", { roomId, index: indexOrData, symbol: mySymbol });
+      }
   };
+
   const handleRPSMove = (moveId) => { setRpsMyMove(moveId); getSocket().emit("make_move", { roomId, symbol: moveId, gameType: 'rps' }); };
+  
+  const handleReactionClick = () => {
+      // User clicked green
+      setReactionState('clicked');
+      getSocket().emit("make_move", { roomId, symbol: 'click', gameType: 'reaction' });
+  };
 
   const isChatEnded = status === "partner_left" || status === "disconnected";
 
@@ -331,52 +422,28 @@ function ChatInterface({ displayName, onLogout }) {
        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
 
-       {/* HEADER */}
+       {/* HEADER (Unchanged) */}
        <header className="px-6 py-4 border-b border-white/5 bg-black/50 backdrop-blur-sm flex justify-between items-center z-50">
         <div className="flex items-center gap-4">
             <CatLogo className="w-10 h-10" />
             <div>
-                <h1 className="text-xl md:text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-                    Guftaguu
-                </h1>
-                
-                {/* STATUS INDICATORS */}
+                <h1 className="text-xl md:text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">Guftaguu</h1>
                 <div className="flex flex-col md:flex-row md:items-center gap-2 mt-1">
-                    {/* ONLINE / WAITING */}
                     <div className="flex items-center gap-2">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                        </span>
-                        <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">
-                            <span className="text-green-400 font-bold">{idleCount}</span> Waiting
-                        </span>
+                        <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
+                        <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono"><span className="text-green-400 font-bold">{idleCount}</span> Waiting</span>
                     </div>
-
                     <span className="hidden md:inline text-zinc-700">|</span>
-
-                    {/* ENGAGED / CHATTING */}
                     <div className="flex items-center gap-2">
-                        <span className="relative flex h-2 w-2">
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                        </span>
-                        <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">
-                            <span className="text-amber-500 font-bold">{busyCount}</span> In Chat
-                        </span>
+                        <span className="relative flex h-2 w-2"><span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span></span>
+                        <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono"><span className="text-amber-500 font-bold">{busyCount}</span> In Chat</span>
                     </div>
                 </div>
             </div>
         </div>
-        
         <div className="flex gap-2 items-center">
-            {/* SUPPORT BUTTON */}
-            <button onClick={() => setShowSupportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/50 text-xs text-yellow-500 hover:bg-yellow-500 hover:text-black transition font-bold">
-                <Coffee size={14} /> <span className="hidden md:inline">Support</span>
-            </button>
-
-            <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition">
-                <AlertTriangle size={14} /> <span className="hidden md:inline">Report</span>
-            </button>
+            <button onClick={() => setShowSupportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/50 text-xs text-yellow-500 hover:bg-yellow-500 hover:text-black transition font-bold"><Coffee size={14} /> <span className="hidden md:inline">Support</span></button>
+            <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition"><AlertTriangle size={14} /> <span className="hidden md:inline">Report</span></button>
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 shadow-[0_0_10px_#22c55e]" : "bg-red-500"}`}></div>
                 <span className={isConnected ? "text-green-500" : "text-red-500"}>{isConnected ? "ONLINE" : "OFFLINE"}</span>
@@ -427,6 +494,11 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="grid grid-cols-2 gap-4">
                         <button onClick={() => sendGameRequest('tictactoe')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">❌⭕</span><span className="font-bold text-sm">Tic-Tac-Toe</span></button>
                         <button onClick={() => sendGameRequest('connect4')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">🔴🟡</span><span className="font-bold text-sm">Connect 4</span></button>
+                        
+                        {/* --- NEW GAMES --- */}
+                        <button onClick={() => sendGameRequest('dotsboxes')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><Grid3X3 size={32} className="text-blue-400"/><span className="font-bold text-sm">Dots & Boxes</span></button>
+                        <button onClick={() => sendGameRequest('reaction')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><Zap size={32} className="text-yellow-400"/><span className="font-bold text-sm">Reaction Time</span></button>
+
                         <button onClick={() => sendGameRequest('rps')} className="col-span-2 bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">✂️🪨📄</span><span className="font-bold text-sm">Rock Paper Scissors</span></button>
                     </div>
                 </GlassCard>
@@ -448,11 +520,7 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h3 className="text-2xl font-bold animate-pulse">Finding a match...</h3>
-                
-                {/* --- AD GOES HERE --- */}
                 <MatchmakingAd /> 
-                {/* -------------------- */}
-
                 <button onClick={() => setStatus('idle')} className="mt-8 text-zinc-500 hover:text-white underline text-sm">Cancel Search</button>
             </div>
         )}
@@ -464,6 +532,8 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="flex flex-col flex-none h-[45%] md:h-auto md:flex-1 min-h-0">
                         {activeGameType === 'rps' ? (
                             <RPSBoard onMove={handleRPSMove} myMove={rpsMyMove} opponentMoved={rpsOpponentMoved} result={rpsResult} />
+                        ) : activeGameType === 'reaction' ? (
+                            <ReactionBoard onClick={handleReactionClick} gameState={reactionState} result={reactionResult} />
                         ) : (
                             <GameBoard gameType={activeGameType} board={board} onMove={handleGameMove} winner={gameWinner} mySymbol={mySymbol} isMyTurn={isMyTurn} statusMessage={statusMessage} />
                         )}
@@ -490,10 +560,7 @@ function ChatInterface({ displayName, onLogout }) {
                                     <Shield size={18} />
                                 </button>
                             )}
-                            <button 
-                                onClick={handleMainButton} 
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${status === 'chatting' ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-white text-black hover:bg-zinc-200'}`}
-                            >
+                            <button onClick={handleMainButton} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${status === 'chatting' ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-white text-black hover:bg-zinc-200'}`}>
                                 {status === 'chatting' ? <><LogOut size={14}/> <span className="hidden md:inline">Stop</span></> : <><RefreshCw size={14}/> <span className="hidden md:inline">New</span></>}
                             </button>
                          </div>
@@ -514,13 +581,7 @@ function ChatInterface({ displayName, onLogout }) {
 
                     {status === "chatting" ? (
                         <form onSubmit={sendMessage} className="p-3 md:p-4 border-t border-white/10 flex gap-2 md:gap-3 bg-black/20 shrink-0">
-                            <input 
-                                type="text" 
-                                value={message} 
-                                onChange={handleInputChange} 
-                                placeholder="Type a message..." 
-                                className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-base md:text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" 
-                            />
+                            <input type="text" value={message} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-base md:text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" />
                             <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50" disabled={!message.trim()}>
                                 <Play size={20} fill="black" />
                             </button>
@@ -538,21 +599,15 @@ function ChatInterface({ displayName, onLogout }) {
   );
 }
 
-// --- LEGAL & NAME SCREENS (Styled) ---
+// --- LEGAL & NAME SCREENS (Unchanged, copied from your original) ---
 const LegalScreen = ({ onAgree }) => {
     const [checked, setChecked] = useState(false);
     return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
-            
-            {/* CLEAN LOGO */}
             <CatLogo className="w-24 h-24 mb-8" />
-            
             <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tighter bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
-            <p className="text-zinc-400 mb-12 text-center max-w-lg">
-                A safe, anonymous space to connect, chat, and play.
-            </p>
-
+            <p className="text-zinc-400 mb-12 text-center max-w-lg">A safe, anonymous space to connect, chat, and play.</p>
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl w-full mb-12">
                 <GlassCard className="p-6 hover:border-white/20 transition duration-300">
                     <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4 text-blue-400"><Shield size={20} /></div>
@@ -573,7 +628,6 @@ const LegalScreen = ({ onAgree }) => {
                     <Link to="/about" className="text-xs text-white underline mt-4 block">Learn More</Link>
                 </GlassCard>
             </div>
-
             <div className="flex flex-col items-center gap-6">
                 <label className="flex items-center gap-3 cursor-pointer group select-none">
                     <div className={`w-6 h-6 border-2 rounded transition flex items-center justify-center ${checked ? 'bg-white border-white' : 'border-zinc-600 group-hover:border-white'}`}>
@@ -590,44 +644,22 @@ const LegalScreen = ({ onAgree }) => {
 
 const NameScreen = ({ onStart }) => {
     const [name, setName] = useState("");
-    // We need state to show modal here too
     const [showSupport, setShowSupport] = useState(false);
-
     return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
-            
             <GlassCard className="w-full max-w-lg p-10 text-center relative z-10">
-                {/* CLEAN LOGO */}
                 <CatLogo className="w-20 h-20 mx-auto mb-6" />
-                
                 <h2 className="text-2xl font-bold mb-2 tracking-tight">Welcome</h2>
                 <p className="text-zinc-400 mb-8">Choose a display name to begin.</p>
-                
-                <input 
-                    type="text" 
-                    placeholder="Enter your name..." 
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-4 text-center text-white text-lg focus:outline-none focus:border-white/50 transition mb-6 placeholder:text-zinc-700" 
-                    value={name} 
-                    onChange={(e) => setName(e.target.value)} 
-                    onKeyDown={(e) => e.key === 'Enter' && name.trim() && onStart(name)}
-                />
-                
-                <GlowButton onClick={() => name.trim() && onStart(name)} className="w-full">
-                    Start Chatting
-                </GlowButton>
+                <input type="text" placeholder="Enter your name..." className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-4 text-center text-white text-lg focus:outline-none focus:border-white/50 transition mb-6 placeholder:text-zinc-700" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && onStart(name)}/>
+                <GlowButton onClick={() => name.trim() && onStart(name)} className="w-full">Start Chatting</GlowButton>
             </GlassCard>
-            
             <footer className="mt-12 text-xs text-zinc-600 flex gap-6 items-center">
                 <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
                 <Link to="/terms" className="hover:text-white transition">Terms</Link>
-                {/* SUPPORT LINK ON HOME SCREEN */}
-                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition flex items-center gap-1 font-bold text-yellow-600/80">
-                    <Coffee size={12}/> Support Dev
-                </button>
+                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition flex items-center gap-1 font-bold text-yellow-600/80"><Coffee size={12}/> Support Dev</button>
             </footer>
-
-            {/* MODAL */}
             {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
         </div>
     );
@@ -637,20 +669,12 @@ const StaticPage = ({ title, content }) => (
     <div className="min-h-screen bg-black text-white p-10 font-sans">
         <Link to="/" className="text-zinc-400 hover:text-white mb-8 inline-flex items-center gap-2">← Back to Home</Link>
         <h1 className="text-5xl font-bold mb-8 tracking-tighter text-white">{title}</h1>
-        
         <div className="max-w-3xl text-zinc-300 space-y-4">
             {content.split('\n').map((line, index) => {
                 if (!line.trim()) return <br key={index} />;
                 const parts = line.split(/(\*\*.*?\*\*)/g);
                 return (
-                    <p key={index} className="leading-relaxed">
-                        {parts.map((part, i) => {
-                            if (part.startsWith('**') && part.endsWith('**')) {
-                                return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>;
-                            }
-                            return part;
-                        })}
-                    </p>
+                    <p key={index} className="leading-relaxed">{parts.map((part, i) => { if (part.startsWith('**') && part.endsWith('**')) { return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>; } return part; })}</p>
                 );
             })}
         </div>
@@ -659,60 +683,13 @@ const StaticPage = ({ title, content }) => (
 
 // --- PAGE CONTENT ---
 const PAGE_CONTENT = {
-    privacy: `
-**1. No Personal Data Collection**
-Guftaguu is designed to be completely anonymous. We do not ask for your email, phone number, or real name. We do not track your location.
-
-**2. No Chat Logs**
-Your conversations are peer-to-peer. Once you disconnect from a chat, the messages are deleted from your browser and are not stored in any permanent database on our servers.
-
-**3. Temporary Data**
-We use "Local Storage" on your device only to remember your Display Name so you don't have to type it every time. You can clear this by clearing your browser cache.
-
-**4. Data Security**
-While we do not store chats, please remember that you are talking to strangers. Do not share personal information (like your address, passwords, or financial details) with anyone. We are not responsible for information you voluntarily share.
-    `,
-
-    terms: `
-**1. Acceptance of Terms**
-By using Guftaguu, you agree to these terms. If you do not agree, please do not use the service. You must be 18+ to use this site.
-
-**2. User Conduct**
-We have a zero-tolerance policy for:
-- Harassment, bullying, or hate speech.
-- Sharing illegal content or pornography.
-- Spamming or advertising.
-- Attempting to bypass bans.
-
-**3. Account Termination**
-We reserve the right to ban users who violate these rules. Bans are based on IP address and device fingerprints.
-
-**4. Disclaimer**
-Guftaguu is provided "as is". We are not responsible for the conduct of any user. Interactions with strangers are at your own risk.
-    `,
-
-    about: `
-**What is Guftaguu?**
-Guftaguu (meaning "Conversation") is a modern space to meet random people from around the world. In an age of social media algorithms, we bring back the excitement of spontaneous connection.
-
-**Our Mission**
-To provide a fast, safe, and fun environment where you can be yourself (or whoever you want to be) without the pressure of profiles, likes, or followers.
-
-**Features**
-- ⚡ **Instant Matching:** No swiping, just chatting.
-- 🎮 **Live Games:** Play Tic-Tac-Toe, Connect 4, and Rock Paper Scissors directly in the chat.
-- 🛡️ **Safety Tools:** Built-in blocking and reporting systems to keep the community clean.
-
-*Contact*
-Have a suggestion? Use the "Report" button in the app header to send feedback directly to our dev team.
-    `
+    privacy: `**1. No Personal Data Collection**\nGuftaguu is designed to be completely anonymous. We do not ask for your email, phone number, or real name. We do not track your location.\n\n**2. No Chat Logs**\nYour conversations are peer-to-peer. Once you disconnect from a chat, the messages are deleted from your browser and are not stored in any permanent database on our servers.\n\n**3. Temporary Data**\nWe use "Local Storage" on your device only to remember your Display Name so you don't have to type it every time. You can clear this by clearing your browser cache.\n\n**4. Data Security**\nWhile we do not store chats, please remember that you are talking to strangers. Do not share personal information (like your address, passwords, or financial details) with anyone. We are not responsible for information you voluntarily share.`,
+    terms: `**1. Acceptance of Terms**\nBy using Guftaguu, you agree to these terms. If you do not agree, please do not use the service. You must be 18+ to use this site.\n\n**2. User Conduct**\nWe have a zero-tolerance policy for:\n- Harassment, bullying, or hate speech.\n- Sharing illegal content or pornography.\n- Spamming or advertising.\n- Attempting to bypass bans.\n\n**3. Account Termination**\nWe reserve the right to ban users who violate these rules. Bans are based on IP address and device fingerprints.\n\n**4. Disclaimer**\nGuftaguu is provided "as is". We are not responsible for the conduct of any user. Interactions with strangers are at your own risk.`,
+    about: `**What is Guftaguu?**\nGuftaguu (meaning "Conversation") is a modern space to meet random people from around the world. In an age of social media algorithms, we bring back the excitement of spontaneous connection.\n\n**Our Mission**\nTo provide a fast, safe, and fun environment where you can be yourself (or whoever you want to be) without the pressure of profiles, likes, or followers.\n\n**Features**\n- ⚡ **Instant Matching:** No swiping, just chatting.\n- 🎮 **Live Games:** Play Tic-Tac-Toe, Connect 4, and Rock Paper Scissors directly in the chat.\n- 🛡️ **Safety Tools:** Built-in blocking and reporting systems to keep the community clean.\n\n*Contact*\nHave a suggestion? Use the "Report" button in the app header to send feedback directly to our dev team.`
 };
 
 function App() {
-    // PERSISTENCE FIX: Check local storage on load
     const savedName = localStorage.getItem("guftaguu_username");
-    
-    // If name exists, go straight to 'chat', else 'legal'
     const [step, setStep] = useState(savedName ? 'chat' : 'legal');
     const [displayName, setDisplayName] = useState(savedName || "");
 
@@ -725,18 +702,12 @@ function App() {
     const handleLogout = () => {
         localStorage.removeItem("guftaguu_username");
         setDisplayName("");
-        setStep('name'); // Go back to name screen on manual exit
+        setStep('name'); 
     };
     
     return (
         <Routes>
-            <Route path="/" element={
-                step === 'legal' ? <LegalScreen onAgree={() => setStep('name')} /> :
-                step === 'name' ? <NameScreen onStart={handleLogin} /> :
-                <ChatInterface displayName={displayName} onLogout={handleLogout} />
-            } />
-            
-            {/* Pass the content variables here */}
+            <Route path="/" element={ step === 'legal' ? <LegalScreen onAgree={() => setStep('name')} /> : step === 'name' ? <NameScreen onStart={handleLogin} /> : <ChatInterface displayName={displayName} onLogout={handleLogout} /> } />
             <Route path="/privacy" element={<StaticPage title="Privacy Policy" content={PAGE_CONTENT.privacy} />} />
             <Route path="/terms" element={<StaticPage title="Terms of Service" content={PAGE_CONTENT.terms} />} />
             <Route path="/about" element={<StaticPage title="About Guftaguu" content={PAGE_CONTENT.about} />} />
