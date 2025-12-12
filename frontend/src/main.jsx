@@ -3,15 +3,12 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
-import { inject } from '@vercel/analytics'
 
-// Initialize Vercel Web Analytics
-inject()
+// We removed the "@vercel/analytics" lines from here 
+// because we are now using the <Analytics /> component in App.jsx
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>,
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>,
 )
