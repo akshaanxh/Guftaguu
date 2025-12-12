@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply } from 'lucide-react';
+import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply, Linkedin } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/next"
 // Import Your Custom Logo
 import logoImage from './assets/logo.png'; 
@@ -14,6 +14,7 @@ import { GameBoard, RPSBoard, ReactionBoard, checkTicTacToeWinner, checkConnect4
 // --- CONFIGURATION ---
 const MY_UPI_ID = "akshaanshhh1133@oksbi"; 
 const MY_NAME = "Guftaguu Dev";
+const MY_LINKEDIN_URL = "https://www.linkedin.com/in/11akshaansh";
 
 // --- VISUAL COMPONENTS ---
 const GlassCard = ({ children, className = "" }) => (
