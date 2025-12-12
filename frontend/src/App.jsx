@@ -4,7 +4,6 @@ import axios from 'axios';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
 import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply } from 'lucide-react';
-import { Analytics } from "@vercel/analytics/next"
 // Import Your Custom Logo
 import logoImage from './assets/logo.png'; 
 
