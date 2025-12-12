@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3 } from 'lucide-react';
+import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply } from 'lucide-react';
 
 // Import Your Custom Logo
 import logoImage from './assets/logo.png'; 
@@ -15,7 +15,7 @@ import { GameBoard, RPSBoard, ReactionBoard, checkTicTacToeWinner, checkConnect4
 const MY_UPI_ID = "akshaanshhh1133@oksbi"; 
 const MY_NAME = "Guftaguu Dev";
 
-// --- VISUAL COMPONENTS (Unchanged) ---
+// --- VISUAL COMPONENTS ---
 const GlassCard = ({ children, className = "" }) => (
     <div className={`bg-zinc-900/80 backdrop-blur-md border border-white/10 shadow-2xl rounded-2xl ${className}`}>
         {children}
@@ -40,28 +40,117 @@ const GlowButton = ({ onClick, children, disabled, variant = "primary", classNam
     );
 };
 
-// --- AD COMPONENT (Unchanged) ---
-const MatchmakingAd = () => {
-    const bannerRef = useRef(null);
-    useEffect(() => {
-        if (!bannerRef.current) return;
-        const adCode = `
-            <script type="text/javascript">
-                atOptions = { 'key' : '86303bcac4e9912594f0c0b195678d78', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };
-            </script>
-            <script type="text/javascript" src="//www.highperformanceformat.com/86303bcac4e9912594f0c0b195678d78/invoke.js"></script>
-        `;
-        const doc = bannerRef.current.contentWindow.document;
-        doc.open();
-        doc.write(`<!DOCTYPE html><html><head><style>body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%; overflow: hidden; background: transparent; }</style></head><body>${adCode}</body></html>`);
-        doc.close();
-    }, []);
+// --- NEW COMPONENT: SWIPEABLE MESSAGE ---
+const SwipeableMessage = ({ msg, onReply }) => {
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchEnd, setTouchEnd] = useState(null);
+    const [translateX, setTranslateX] = useState(0);
+
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+        const currentTouch = e.targetTouches[0].clientX;
+        if (touchStart) {
+            const diff = currentTouch - touchStart;
+            // Only allow dragging to the right (0 to 100px max)
+            if (diff > 0 && diff < 100) {
+                setTranslateX(diff);
+            }
+        }
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isSwipeRight = distance < -minSwipeDistance;
+
+        if (isSwipeRight) {
+            onReply(msg); // Trigger reply
+        }
+        
+        // Reset animation
+        setTranslateX(0);
+        setTouchStart(null);
+        setTouchEnd(null);
+    };
+
     return (
-        <div className="my-6 mx-auto w-[300px] h-[250px] bg-black/40 border border-white/5 rounded-lg flex items-center justify-center overflow-hidden">
-            <iframe ref={bannerRef} title="Ad" width="300" height="250" scrolling="no" frameBorder="0" style={{ border: 'none', overflow: 'hidden' }} />
+        <div 
+            className="relative group touch-pan-y" 
+            onTouchStart={onTouchStart} 
+            onTouchMove={onTouchMove} 
+            onTouchEnd={onTouchEnd}
+        >
+            {/* Reply Icon Background (Visible on Swipe) */}
+            <div 
+                className="absolute left-0 top-1/2 -translate-y-1/2 text-zinc-500 transition-opacity duration-300"
+                style={{ opacity: translateX > 20 ? 1 : 0, transform: `translateX(10px)` }}
+            >
+                <Reply size={20} />
+            </div>
+
+            {/* The Message Bubble */}
+            <div 
+                className={`flex w-full transition-transform duration-200 ease-out ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+                style={{ transform: `translateX(${translateX}px)` }}
+            >
+                {/* Reply Button for Desktop (Hover) - Left side for incoming */}
+                {msg.sender !== "me" && (
+                    <button 
+                        onClick={() => onReply(msg)}
+                        className="hidden md:flex opacity-0 group-hover:opacity-100 items-center justify-center text-zinc-500 hover:text-white px-2 transition-all"
+                        title="Reply"
+                    >
+                        <Reply size={16} />
+                    </button>
+                )}
+
+                <div className={`max-w-[85%] relative flex flex-col ${msg.sender === "me" ? "items-end" : "items-start"}`}>
+                    
+                    {/* QUOTED REPLY BUBBLE */}
+                    {msg.replyTo && (
+                        <div className={`
+                            mb-1 text-xs px-3 py-2 rounded-lg border-l-4 w-full max-w-full truncate opacity-80 select-none
+                            ${msg.sender === "me" 
+                                ? "bg-zinc-200 text-black border-zinc-400" 
+                                : "bg-zinc-800 text-zinc-300 border-zinc-500"}
+                        `}>
+                            <div className="font-bold mb-0.5 text-[10px] uppercase">
+                                {msg.replyTo.sender === "me" ? "You" : "Stranger"}
+                            </div>
+                            <div className="truncate">{msg.replyTo.text}</div>
+                        </div>
+                    )}
+
+                    {/* MAIN TEXT */}
+                    <div className={`px-4 py-2 md:px-5 md:py-3 rounded-2xl text-sm leading-relaxed ${msg.sender === "me" ? "bg-white text-black rounded-tr-sm" : "bg-zinc-800 text-zinc-100 border border-white/5 rounded-tl-sm"}`}>
+                        {msg.text}
+                    </div>
+                </div>
+
+                {/* Reply Button for Desktop (Hover) - Right side for outgoing */}
+                {msg.sender === "me" && (
+                     <button 
+                        onClick={() => onReply(msg)}
+                        className="hidden md:flex opacity-0 group-hover:opacity-100 items-center justify-center text-zinc-500 hover:text-white px-2 transition-all"
+                        title="Reply"
+                    >
+                        <Reply size={16} />
+                    </button>
+                )}
+            </div>
         </div>
     );
 };
+
+// --- AD COMPONENT (Disabled) ---
+// const MatchmakingAd = () => { ... }
 
 // --- SUPPORT MODAL (Unchanged) ---
 const SupportModal = ({ onClose }) => (
@@ -97,6 +186,9 @@ function ChatInterface({ displayName, onLogout }) {
   const [messages, setMessages] = useState([]);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
+  
+  // REPLY STATE
+  const [replyingTo, setReplyingTo] = useState(null);
 
   // Game State
   const [activeGameType, setActiveGameType] = useState(null); 
@@ -159,8 +251,14 @@ function ChatInterface({ displayName, onLogout }) {
     });
 
     socket.on('receive_name', (name) => setPartnerName(name));
-    socket.on('receive_message', (text) => {
-        setMessages((prev) => [...prev, { text, sender: "stranger" }]);
+    
+    // UPDATED: Handle complex message object with reply
+    socket.on('receive_message', (data) => {
+        // Support both old string format and new object format
+        const text = typeof data === 'object' ? data.text : data;
+        const replyTo = typeof data === 'object' ? data.replyTo : null;
+
+        setMessages((prev) => [...prev, { text, sender: "stranger", replyTo }]);
         setIsPartnerTyping(false);
     });
     
@@ -296,7 +394,7 @@ function ChatInterface({ displayName, onLogout }) {
     }
   }, [board, activeGameType, gameActive]);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isPartnerTyping]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isPartnerTyping, replyingTo]);
 
   // --- NEW: PREVENT NAVIGATION AND REFRESH ---
   useEffect(() => {
@@ -349,21 +447,32 @@ function ChatInterface({ displayName, onLogout }) {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => { getSocket().emit('typing', { roomId, isTyping: false }); }, 1000);
   };
+
+  // --- SEND MESSAGE LOGIC ---
   const sendMessage = (e) => {
     e.preventDefault();
     if (message.trim() && status === 'chatting' && roomId) {
-        setMessages((prev) => [...prev, { text: message, sender: "me" }]);
-        getSocket().emit("send_message", { roomId, message });
-        setMessage(""); getSocket().emit('typing', { roomId, isTyping: false });
+        // Construct the message object with Reply info
+        const msgObject = { text: message, replyTo: replyingTo };
+        
+        // Update local state
+        setMessages((prev) => [...prev, { ...msgObject, sender: "me" }]);
+        
+        // Send to backend (backend will just forward this object)
+        getSocket().emit("send_message", { roomId, message: msgObject });
+        
+        // Reset inputs
+        setMessage(""); 
+        setReplyingTo(null);
+        getSocket().emit('typing', { roomId, isTyping: false });
     }
   };
+
   const handleDisconnectChat = () => { 
       if (!roomId) return; 
       getSocket().emit('leave_room', { roomId }); 
       setStatus("disconnected"); 
       resetGame(); 
-      // Clear the history trap so they can navigate away now
-      // (Optional, browsers handle this naturally on next interaction)
   };
   const handleNewMatch = () => { resetAll(); setStatus("searching"); getSocket().emit("find_match"); };
   const handleMainButton = () => { if (status === 'chatting') handleDisconnectChat(); else handleNewMatch(); };
@@ -548,7 +657,7 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h3 className="text-2xl font-bold animate-pulse">Finding a match...</h3>
-                {/*<MatchmakingAd />*/}
+                {/* <MatchmakingAd /> */} 
                 <button onClick={() => setStatus('idle')} className="mt-8 text-zinc-500 hover:text-white underline text-sm">Cancel Search</button>
             </div>
         )}
@@ -594,13 +703,10 @@ function ChatInterface({ displayName, onLogout }) {
                          </div>
                     </div>
                     
+                    {/* MESSAGE LIST WITH SWIPE SUPPORT */}
                     <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                          {messages.map((msg, index) => (
-                            <div key={index} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
-                                <div className={`max-w-[85%] px-4 py-2 md:px-5 md:py-3 rounded-2xl text-sm leading-relaxed ${msg.sender === "me" ? "bg-white text-black rounded-tr-sm" : "bg-zinc-800 text-zinc-100 border border-white/5 rounded-tl-sm"}`}>
-                                    {msg.text}
-                                </div>
-                            </div>
+                             <SwipeableMessage key={index} msg={msg} onReply={setReplyingTo} />
                         ))}
                         {isPartnerTyping && <div className="text-xs text-zinc-500 px-2 animate-pulse">typing...</div>}
                         {status === "partner_left" && <div className="flex justify-center mt-6 mb-2"><span className="bg-zinc-800/50 border border-white/5 text-zinc-500 text-xs px-4 py-1 rounded-full">Partner disconnected</span></div>}
@@ -608,12 +714,26 @@ function ChatInterface({ displayName, onLogout }) {
                     </div>
 
                     {status === "chatting" ? (
-                        <form onSubmit={sendMessage} className="p-3 md:p-4 border-t border-white/10 flex gap-2 md:gap-3 bg-black/20 shrink-0">
-                            <input type="text" value={message} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-base md:text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" />
-                            <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50" disabled={!message.trim()}>
-                                <Play size={20} fill="black" />
-                            </button>
-                        </form>
+                        <div className="flex flex-col bg-black/20 shrink-0">
+                            {/* REPLY PREVIEW BAR */}
+                            {replyingTo && (
+                                <div className="flex items-center justify-between bg-zinc-800/80 backdrop-blur border-t border-white/5 px-4 py-2 border-l-4 border-l-blue-400 mx-4 mt-2 rounded-r-lg">
+                                    <div className="flex flex-col overflow-hidden">
+                                        <span className="text-blue-400 text-xs font-bold">Replying to {replyingTo.sender === "me" ? "yourself" : "Stranger"}</span>
+                                        <span className="text-zinc-400 text-sm truncate">{replyingTo.text}</span>
+                                    </div>
+                                    <button onClick={() => setReplyingTo(null)} className="p-1 hover:bg-zinc-700 rounded-full text-zinc-400"><X size={16} /></button>
+                                </div>
+                            )}
+
+                            {/* INPUT FORM */}
+                            <form onSubmit={sendMessage} className="p-3 md:p-4 border-t border-white/10 flex gap-2 md:gap-3">
+                                <input type="text" value={message} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-base md:text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" />
+                                <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50" disabled={!message.trim()}>
+                                    <Play size={20} fill="black" />
+                                </button>
+                            </form>
+                        </div>
                     ) : (
                          <div className="p-4 md:p-6 border-t border-white/10 flex justify-center bg-black/20 shrink-0">
                             <GlowButton onClick={handleNewMatch} className="w-full">Find New Match</GlowButton>
