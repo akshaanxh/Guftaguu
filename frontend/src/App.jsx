@@ -131,7 +131,7 @@ function ChatInterface({ displayName, onLogout }) {
 
   useEffect(() => {
     socketRef.current = io.connect("http://localhost:3001"); // Point to local for testing
-    // socketRef.current = io.connect("https://guftaguu-backend.onrender.com"); // Revert this when deploying
+    socketRef.current = io.connect("https://guftaguu-backend.onrender.com"); // Revert this when deploying
     const socket = socketRef.current;
 
     socket.on('connect', () => setIsConnected(true));
