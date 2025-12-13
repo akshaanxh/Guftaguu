@@ -55,12 +55,16 @@ io.on('connection', (socket) => {
     socket.on('find_match', async () => {
         console.log(`User ${socket.id} looking for match...`);
         let partnerId = await redis.rpop('waiting_queue');
-        let attempts = 0;
+        
+        // REMOVED: attempts counter to prevent giving up too early
         
         while (partnerId) {
-            attempts++;
-            const iBlockedThem = await redis.get(`block:${socket.id}:${partnerId}`);
-            const theyBlockedMe = await redis.get(`block:${partnerId}:${socket.id}`);
+            // OPTIMIZATION: Check both block statuses in parallel using Promise.all
+            const [iBlockedThem, theyBlockedMe] = await Promise.all([
+                redis.get(`block:${socket.id}:${partnerId}`),
+                redis.get(`block:${partnerId}:${socket.id}`)
+            ]);
+            
             const partnerSocket = io.sockets.sockets.get(partnerId);
             const isValidUser = partnerSocket && partnerId !== socket.id;
 
@@ -73,10 +77,14 @@ io.on('connection', (socket) => {
                 io.to(roomId).emit('match_found', { roomId, partnerId });
                 return; 
             }
+            
+            // Only push back if the user is actually valid (socket exists) but was skipped due to blocks/same-id
             if (partnerSocket && partnerId !== socket.id) {
                 await redis.lpush('waiting_queue', partnerId);
             }
-            if (attempts >= 5) break; 
+            
+            // REMOVED: if (attempts >= 5) break; 
+            
             partnerId = await redis.rpop('waiting_queue');
         }
         await redis.lpush('waiting_queue', socket.id);

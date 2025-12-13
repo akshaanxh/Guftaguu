@@ -205,6 +205,9 @@ function ChatInterface({ displayName, onLogout }) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  
+  // FIX: Track internal typing state to prevent flood
+  const isTypingRef = useRef(false);
   const typingTimeoutRef = useRef(null);
   
   // REPLY STATE
@@ -245,7 +248,7 @@ function ChatInterface({ displayName, onLogout }) {
     // Enhanced socket configuration with reconnection
     socketRef.current = io.connect("https://guftaguu-backend.onrender.com", {
         reconnection: true,           // Enable auto-reconnection
-        reconnectionAttempts: 5,      // Try 5 times
+        reconnectionAttempts: 10,     // INCREASED: Try more times
         reconnectionDelay: 1000,      // Wait 1s between attempts
         reconnectionDelayMax: 5000,   // Max 5s wait
         timeout: 20000,               // Connection timeout
@@ -322,7 +325,7 @@ function ChatInterface({ displayName, onLogout }) {
                 // You could force a reconnection here
                 socket.disconnect();
                 socket.connect();
-            }, 5000); // Wait 5s for pong
+            }, 10000); // FIX: Increased to 10s to prevent false disconnects under load
             
             socket.once('pong', () => {
                 clearTimeout(pongTimeout);
@@ -544,11 +547,24 @@ function ChatInterface({ displayName, onLogout }) {
   };
 
   const handleStartChat = () => { setStatus("searching"); getSocket().emit("find_match"); };
+  
+  // FIX: Optimized typing handler to prevent spamming server
   const handleInputChange = (e) => {
-      setMessage(e.target.value); if (!roomId) return;
-      getSocket().emit('typing', { roomId, isTyping: true });
+      setMessage(e.target.value); 
+      if (!roomId) return;
+      
+      // Only emit 'true' if we weren't already typing to save bandwidth
+      if (!isTypingRef.current) {
+          isTypingRef.current = true;
+          getSocket().emit('typing', { roomId, isTyping: true });
+      }
+      
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => { getSocket().emit('typing', { roomId, isTyping: false }); }, 1000);
+      
+      typingTimeoutRef.current = setTimeout(() => { 
+          isTypingRef.current = false;
+          getSocket().emit('typing', { roomId, isTyping: false }); 
+      }, 1000);
   };
   
   const sendMessage = (e) => {
@@ -557,8 +573,13 @@ function ChatInterface({ displayName, onLogout }) {
         const msgObject = { text: message, replyTo: replyingTo };
         setMessages((prev) => [...prev, { ...msgObject, sender: "me" }]);
         getSocket().emit("send_message", { roomId, message: msgObject });
-        setMessage(""); setReplyingTo(null);
+        
+        // Clear typing state immediately on send
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        isTypingRef.current = false;
         getSocket().emit('typing', { roomId, isTyping: false });
+        
+        setMessage(""); setReplyingTo(null);
     }
   };
 
