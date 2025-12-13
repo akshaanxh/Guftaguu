@@ -167,11 +167,33 @@ const SupportModal = ({ onClose }) => (
     </div>
 );
 
+const ConnectionStatusBanner = ({ isConnected, isReconnecting }) => {
+    if (isConnected && !isReconnecting) return null; // Don't show if everything is fine
+    
+    return (
+        <div className={`fixed top-0 left-0 right-0 z-[100] py-2 px-4 text-center text-sm font-bold ${
+            isReconnecting ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'
+        } animate-in slide-in-from-top duration-300`}>
+            {isReconnecting ? (
+                <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <span>Reconnecting to server...</span>
+                </div>
+            ) : (
+                <div className="flex items-center justify-center gap-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <span>Connection lost! Attempting to reconnect...</span>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // --- CHAT INTERFACE ---
 function ChatInterface({ displayName, onLogout }) {
   const socketRef = useRef();
   const messagesEndRef = useRef(null);
-  
+  const [isReconnecting, setIsReconnecting] = useState(false);
   // State
   const [idleCount, setIdleCount] = useState(1); 
   const [busyCount, setBusyCount] = useState(0);
@@ -220,17 +242,104 @@ function ChatInterface({ displayName, onLogout }) {
   const getSocket = () => socketRef.current;
 
   useEffect(() => {
-    // socketRef.current = io.connect("http://localhost:3001");
-    socketRef.current = io.connect("https://guftaguu-backend.onrender.com");
+    // Enhanced socket configuration with reconnection
+    socketRef.current = io.connect("https://guftaguu-backend.onrender.com", {
+        reconnection: true,           // Enable auto-reconnection
+        reconnectionAttempts: 5,      // Try 5 times
+        reconnectionDelay: 1000,      // Wait 1s between attempts
+        reconnectionDelayMax: 5000,   // Max 5s wait
+        timeout: 20000,               // Connection timeout
+        transports: ['websocket', 'polling'], // Fallback to polling
+        forceNew: true                // Force new connection
+    });
+    
     const socket = socketRef.current;
 
-    socket.on('connect', () => setIsConnected(true));
-    socket.on('disconnect', () => { setIsConnected(false); });
+    // ===== CONNECTION STATE HANDLERS =====
+    socket.on('connect', () => {
+        console.log('✅ Connected to server');
+        setIsConnected(true);
+        
+        // If we were in a chat and reconnected, try to rejoin
+        if (roomId && status === 'chatting') {
+            console.log('🔄 Attempting to rejoin room after reconnection...');
+            // You might want to emit a rejoin event here if you implement it server-side
+        }
+    });
 
+    socket.on('reconnect_attempt', () => setIsReconnecting(true));
+    socket.on('reconnect', () => setIsReconnecting(false));
+    socket.on('connect', () => setIsReconnecting(false));
+
+    socket.on('disconnect', (reason) => {
+        console.log('❌ Disconnected:', reason);
+        setIsConnected(false);
+        
+        // If we were chatting, notify user
+        if (status === 'chatting') {
+            setStatus("partner_left");
+            alert("Connection lost! Your chat partner may have disconnected.");
+        }
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('🔴 Connection error:', error.message);
+        setIsConnected(false);
+    });
+
+    socket.on('reconnect', (attemptNumber) => {
+        console.log(`🔄 Reconnected after ${attemptNumber} attempts`);
+        setIsConnected(true);
+    });
+
+    socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log(`🔄 Reconnection attempt ${attemptNumber}...`);
+    });
+
+    socket.on('reconnect_failed', () => {
+        console.error('❌ Reconnection failed after all attempts');
+        setIsConnected(false);
+        if (status === 'chatting') {
+            alert("Failed to reconnect. Please refresh the page.");
+        }
+    });
+
+    // ===== SERVER INITIATED DISCONNECTION =====
+    socket.on('connection_dead', () => {
+        console.log('💀 Server detected dead connection');
+        setStatus("partner_left");
+        alert("Connection error detected. Starting new chat...");
+    });
+
+    // ===== HEARTBEAT / PING-PONG =====
+    const heartbeatInterval = setInterval(() => {
+        if (socket.connected && status === 'chatting') {
+            socket.emit('ping');
+            
+            // Set timeout to check if we got pong back
+            const pongTimeout = setTimeout(() => {
+                console.warn('⚠️ No pong received - connection may be dead');
+                // You could force a reconnection here
+                socket.disconnect();
+                socket.connect();
+            }, 5000); // Wait 5s for pong
+            
+            socket.once('pong', () => {
+                clearTimeout(pongTimeout);
+                console.log('💓 Heartbeat OK');
+            });
+        }
+    }, 15000); // Check every 15 seconds
+
+    // ===== EXISTING EVENT HANDLERS =====
     socket.on('match_found', ({ roomId, partnerId }) => {
-        setStatus("chatting"); setRoomId(roomId); setPartnerId(partnerId); 
-        setMessages([]); resetGame(); setPartnerName(null); 
-        playConnectSound(); // Play sound on match
+        setStatus("chatting"); 
+        setRoomId(roomId); 
+        setPartnerId(partnerId); 
+        setMessages([]); 
+        resetGame(); 
+        setPartnerName(null); 
+        playConnectSound();
         socket.emit('send_name', { roomId, name: displayName });
     });
 
@@ -249,20 +358,22 @@ function ChatInterface({ displayName, onLogout }) {
     socket.on('receive_message', (data) => {
         const text = typeof data === 'object' ? data.text : data;
         const replyTo = typeof data === 'object' ? data.replyTo : null;
-
         setMessages((prev) => [...prev, { text, sender: "stranger", replyTo }]);
         setIsPartnerTyping(false);
     });
     
-    socket.on('partner_disconnected', () => { setStatus("partner_left"); resetGame(); });
+    socket.on('partner_disconnected', () => { 
+        setStatus("partner_left"); 
+        resetGame(); 
+    });
+    
     socket.on('display_typing', (isTyping) => setIsPartnerTyping(isTyping));
-
     socket.on('game_requested', (gameType) => setIncomingRequest(gameType));
     
     socket.on('game_start', ({ gameType, starterId }) => {
-        setGameActive(true); setActiveGameType(gameType);
+        setGameActive(true); 
+        setActiveGameType(gameType);
         
-        // Init Boards
         if (gameType === 'tictactoe') setBoard(Array(9).fill(null));
         else if (gameType === 'connect4') setBoard(Array(42).fill(null)); 
         else if (gameType === 'dotsboxes') setBoard({ hLines: Array(30).fill(false), vLines: Array(30).fill(false), boxes: Array(25).fill(null) });
@@ -272,18 +383,27 @@ function ChatInterface({ displayName, onLogout }) {
             setReactionResult(null); 
         }
 
-        setIncomingRequest(null); setWaitingForResponse(false); setStatusMessage(""); setGameWinner(null);
+        setIncomingRequest(null); 
+        setWaitingForResponse(false); 
+        setStatusMessage(""); 
+        setGameWinner(null);
         
         const amIAccepter = socket.id === starterId; 
-        if (amIAccepter) { setMySymbol('O'); setIsMyTurn(false); } else { setMySymbol('X'); setIsMyTurn(true); }
+        if (amIAccepter) { 
+            setMySymbol('O'); 
+            setIsMyTurn(false); 
+        } else { 
+            setMySymbol('X'); 
+            setIsMyTurn(true); 
+        }
     });
 
     socket.on('game_declined', () => {
-        setWaitingForResponse(false); setStatusMessage("Stranger declined.");
+        setWaitingForResponse(false); 
+        setStatusMessage("Stranger declined.");
         setTimeout(() => { setStatusMessage(""); }, 2000);
     });
 
-    // --- RECEIVE MOVE (Opponent) ---
     socket.on('receive_move', ({ index, symbol, extraData }) => {
         if (extraData && extraData.game === 'dotsboxes') {
             const { type, index: i } = extraData;
@@ -325,12 +445,17 @@ function ChatInterface({ displayName, onLogout }) {
                 return next;
             });
         } else {
-            setBoard((prev) => { const newBoard = [...prev]; newBoard[index] = symbol; return newBoard; });
+            setBoard((prev) => { 
+                const newBoard = [...prev]; 
+                newBoard[index] = symbol; 
+                return newBoard; 
+            });
             setIsMyTurn(true);
         }
     });
 
     socket.on('rps_waiting', () => setRpsOpponentMoved(true));
+    
     socket.on('rps_reveal', ({ moves }) => {
         const mySocketId = socket.id;
         const keys = Object.keys(moves);
@@ -340,21 +465,33 @@ function ChatInterface({ displayName, onLogout }) {
         
         let result = 'draw';
         if (myMoveVal !== theirMoveVal) {
-            if ((myMoveVal === 'R' && theirMoveVal === 'S') || (myMoveVal === 'P' && theirMoveVal === 'R') || (myMoveVal === 'S' && theirMoveVal === 'P')) { result = 'me'; } else { result = 'opponent'; }
+            if ((myMoveVal === 'R' && theirMoveVal === 'S') || 
+                (myMoveVal === 'P' && theirMoveVal === 'R') || 
+                (myMoveVal === 'S' && theirMoveVal === 'P')) { 
+                result = 'me'; 
+            } else { 
+                result = 'opponent'; 
+            }
         }
         setRpsResult({ winner: result, myMove: myMoveVal, theirMove: theirMoveVal });
     });
 
-    // --- REACTION GAME EVENTS (SIMPLIFIED) ---
-    socket.on('reaction_green_light', () => { setReactionState('ready'); });
+    socket.on('reaction_green_light', () => { 
+        setReactionState('ready'); 
+    });
     
     socket.on('reaction_result', ({ winnerId, time }) => {
         const winner = winnerId === socket.id ? 'me' : 'opponent';
         setReactionResult({ winner, time });
     });
 
-    return () => socket.disconnect();
-  }, []);
+    // ===== CLEANUP =====
+    return () => {
+        clearInterval(heartbeatInterval);
+        socket.off(); // Remove all listeners
+        socket.disconnect();
+    };
+}, [displayName]);
 
   // WIN CHECKER HOOK
   useEffect(() => {
@@ -481,6 +618,8 @@ function ChatInterface({ displayName, onLogout }) {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
+        <ConnectionStatusBanner isConnected={isConnected} isReconnecting={isReconnecting} />
+       
        {/* Background */}
        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
