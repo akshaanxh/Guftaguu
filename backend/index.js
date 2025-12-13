@@ -30,16 +30,26 @@ const io = new Server(server, {
             "https://guftaguu.vercel.app"
         ],
         methods: ["GET", "POST"]
-    }
+    },
+    // ADD THESE CRITICAL SETTINGS
+    pingTimeout: 30000,    // How long to wait for pong before considering connection dead
+    pingInterval: 10000,   // How often to send ping packets
+    upgradeTimeout: 10000,
+    transports: ['websocket', 'polling'] // Allow fallback to polling if websocket fails
 });
 
 // --- GLOBAL VARIABLES ---
 const userRooms = {}; 
 const rpsMoves = {}; 
-const reactionState = {}; // Store reaction game state
+const reactionState = {};
 
 io.on('connection', (socket) => {
     console.log(`User Connected: ${socket.id}`);
+
+    // --- ADD CONNECTION HEALTH CHECK ---
+    socket.on('ping', () => {
+        socket.emit('pong');
+    });
 
     // --- MATCHMAKING ---
     socket.on('find_match', async () => {
@@ -72,7 +82,6 @@ io.on('connection', (socket) => {
         await redis.lpush('waiting_queue', socket.id);
     });
 
-    // --- SECURE NAME EXCHANGE ---
     socket.on('send_name', (data) => {
         const { roomId, name } = data;
         let finalName = name;
@@ -85,7 +94,16 @@ io.on('connection', (socket) => {
     });
 
     socket.on('send_message', (data) => {
-        socket.to(data.roomId).emit('receive_message', data.message);
+        const roomId = data.roomId;
+        const targetSocket = io.sockets.sockets.get(socket.id);
+        
+        // Verify socket is still connected and in room
+        if (!targetSocket || !targetSocket.rooms.has(roomId)) {
+            socket.emit('connection_dead');
+            return;
+        }
+        
+        socket.to(roomId).emit('receive_message', data.message);
     });
 
     socket.on('block_user', async (data) => {
@@ -108,6 +126,15 @@ io.on('connection', (socket) => {
         console.log(`User Disconnected: ${socket.id}`);
     });
 
+    // ADD ERROR HANDLER
+    socket.on('error', (error) => {
+        console.error(`Socket error for ${socket.id}:`, error);
+        const roomId = userRooms[socket.id];
+        if (roomId) {
+            socket.to(roomId).emit('partner_disconnected');
+        }
+    });
+
     // --- GAME LOGIC ---
     socket.on('request_game', (data) => socket.to(data.roomId).emit('game_requested', data.gameType));
     
@@ -117,7 +144,6 @@ io.on('connection', (socket) => {
         
         io.to(roomId).emit('game_start', { gameType, starterId: socket.id });
 
-        // REACTION GAME SERVER LOGIC (SIMPLIFIED - SINGLE ROUND)
         if (gameType === 'reaction') {
             reactionState[roomId] = { active: false, startTime: 0, winnerDeclared: false };
             setTimeout(() => {
@@ -143,7 +169,6 @@ io.on('connection', (socket) => {
         delete reactionState[roomId];
     });
 
-    // --- MOVE LOGIC ---
     socket.on('make_move', (data) => {
         const { roomId, index, symbol, gameType, extraData } = data;
 
@@ -176,8 +201,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // DOTS & BOXES / TICTACTOE / CONNECT4
-        // Just relay the move to the other player
         socket.to(roomId).emit('receive_move', { index, symbol, extraData });
     });
 });
