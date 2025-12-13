@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply, LinkedinIcon } from 'lucide-react';
+import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply, LinkedinIcon, Repeat } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/react"
 
 // Import Your Custom Logo
@@ -16,6 +16,13 @@ import { GameBoard, RPSBoard, ReactionBoard, checkTicTacToeWinner, checkConnect4
 const MY_UPI_ID = "akshaanshhh1133@oksbi"; 
 const MY_NAME = "Guftaguu Dev";
 const MY_LINKEDIN_URL = "https://www.linkedin.com/in/11akshaansh";
+
+// --- SOUND UTILS ---
+const playConnectSound = () => {
+    const audio = new Audio("https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3");
+    audio.volume = 0.5;
+    audio.play().catch(e => console.log("Audio play failed (user interaction needed first)"));
+};
 
 // --- VISUAL COMPONENTS ---
 const GlassCard = ({ children, className = "" }) => (
@@ -60,7 +67,6 @@ const SwipeableMessage = ({ msg, onReply }) => {
         const currentTouch = e.targetTouches[0].clientX;
         if (touchStart) {
             const diff = currentTouch - touchStart;
-            // Only allow dragging to the right (0 to 100px max)
             if (diff > 0 && diff < 100) {
                 setTranslateX(diff);
             }
@@ -73,10 +79,9 @@ const SwipeableMessage = ({ msg, onReply }) => {
         const isSwipeRight = distance < -minSwipeDistance;
 
         if (isSwipeRight) {
-            onReply(msg); // Trigger reply
+            onReply(msg);
         }
         
-        // Reset animation
         setTranslateX(0);
         setTouchStart(null);
         setTouchEnd(null);
@@ -89,7 +94,6 @@ const SwipeableMessage = ({ msg, onReply }) => {
             onTouchMove={onTouchMove} 
             onTouchEnd={onTouchEnd}
         >
-            {/* Reply Icon Background (Visible on Swipe) */}
             <div 
                 className="absolute left-0 top-1/2 -translate-y-1/2 text-zinc-500 transition-opacity duration-300"
                 style={{ opacity: translateX > 20 ? 1 : 0, transform: `translateX(10px)` }}
@@ -97,12 +101,10 @@ const SwipeableMessage = ({ msg, onReply }) => {
                 <Reply size={20} />
             </div>
 
-            {/* The Message Bubble */}
             <div 
                 className={`flex w-full transition-transform duration-200 ease-out ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
                 style={{ transform: `translateX(${translateX}px)` }}
             >
-                {/* Reply Button for Desktop (Hover) - Left side for incoming */}
                 {msg.sender !== "me" && (
                     <button 
                         onClick={() => onReply(msg)}
@@ -115,7 +117,6 @@ const SwipeableMessage = ({ msg, onReply }) => {
 
                 <div className={`max-w-[85%] relative flex flex-col ${msg.sender === "me" ? "items-end" : "items-start"}`}>
                     
-                    {/* QUOTED REPLY BUBBLE */}
                     {msg.replyTo && (
                         <div className={`
                             mb-1 text-xs px-3 py-2 rounded-lg border-l-4 w-full max-w-full truncate opacity-80 select-none
@@ -130,13 +131,11 @@ const SwipeableMessage = ({ msg, onReply }) => {
                         </div>
                     )}
 
-                    {/* MAIN TEXT */}
                     <div className={`px-4 py-2 md:px-5 md:py-3 rounded-2xl text-sm leading-relaxed ${msg.sender === "me" ? "bg-white text-black rounded-tr-sm" : "bg-zinc-800 text-zinc-100 border border-white/5 rounded-tl-sm"}`}>
                         {msg.text}
                     </div>
                 </div>
 
-                {/* Reply Button for Desktop (Hover) - Right side for outgoing */}
                 {msg.sender === "me" && (
                      <button 
                         onClick={() => onReply(msg)}
@@ -202,7 +201,7 @@ function ChatInterface({ displayName, onLogout }) {
   const [rpsOpponentMoved, setRpsOpponentMoved] = useState(false);
   const [rpsResult, setRpsResult] = useState(null);
 
-  // Reaction Game Specific
+  // Reaction Game Specific (SIMPLIFIED - NO ROUNDS/SCORES)
   const [reactionState, setReactionState] = useState('waiting'); // waiting, ready, result
   const [reactionResult, setReactionResult] = useState(null);
 
@@ -221,27 +220,17 @@ function ChatInterface({ displayName, onLogout }) {
   const getSocket = () => socketRef.current;
 
   useEffect(() => {
-    // -----------------------------------------------------------------
-    //  DEPLOYMENT URL - Change this line if hosting on Render vs Local
-    // -----------------------------------------------------------------
     // socketRef.current = io.connect("http://localhost:3001");
     socketRef.current = io.connect("https://guftaguu-backend.onrender.com");
-    // -----------------------------------------------------------------
-
     const socket = socketRef.current;
 
     socket.on('connect', () => setIsConnected(true));
-    
-    // --- STICKY CONNECTION FIX ---
-    // If disconnected, just mark offline. DO NOT resetAll().
-    socket.on('disconnect', () => { 
-        setIsConnected(false); 
-        // resetAll();  <-- REMOVED THIS LINE TO PREVENT CRASHING/RESETTING
-    });
+    socket.on('disconnect', () => { setIsConnected(false); });
 
     socket.on('match_found', ({ roomId, partnerId }) => {
         setStatus("chatting"); setRoomId(roomId); setPartnerId(partnerId); 
         setMessages([]); resetGame(); setPartnerName(null); 
+        playConnectSound(); // Play sound on match
         socket.emit('send_name', { roomId, name: displayName });
     });
 
@@ -257,9 +246,7 @@ function ChatInterface({ displayName, onLogout }) {
 
     socket.on('receive_name', (name) => setPartnerName(name));
     
-    // UPDATED: Handle complex message object with reply
     socket.on('receive_message', (data) => {
-        // Support both old string format and new object format
         const text = typeof data === 'object' ? data.text : data;
         const replyTo = typeof data === 'object' ? data.replyTo : null;
 
@@ -280,7 +267,10 @@ function ChatInterface({ displayName, onLogout }) {
         else if (gameType === 'connect4') setBoard(Array(42).fill(null)); 
         else if (gameType === 'dotsboxes') setBoard({ hLines: Array(30).fill(false), vLines: Array(30).fill(false), boxes: Array(25).fill(null) });
         else if (gameType === 'rps') { setRpsMyMove(null); setRpsOpponentMoved(false); setRpsResult(null); }
-        else if (gameType === 'reaction') { setReactionState('waiting'); setReactionResult(null); }
+        else if (gameType === 'reaction') { 
+            setReactionState('waiting'); 
+            setReactionResult(null); 
+        }
 
         setIncomingRequest(null); setWaitingForResponse(false); setStatusMessage(""); setGameWinner(null);
         
@@ -303,11 +293,9 @@ function ChatInterface({ displayName, onLogout }) {
                 if (type === 'h') { next.hLines = [...prev.hLines]; next.hLines[i] = true; }
                 if (type === 'v') { next.vLines = [...prev.vLines]; next.vLines[i] = true; }
                 
-                // CHECK FOR BOX COMPLETION (Logic replicated on both clients)
                 const newBoxes = [...prev.boxes];
                 let boxCompleted = false;
 
-                // Helper to check a specific box index r,c
                 const isBoxFull = (r, c, h, v) => {
                     if (r<0 || r>=5 || c<0 || c>=5) return false;
                     const hTop = h[r*5+c];
@@ -317,7 +305,6 @@ function ChatInterface({ displayName, onLogout }) {
                     return hTop && hBot && vLeft && vRight;
                 }
 
-                // Iterate all boxes to update ownership
                 for(let r=0; r<5; r++){
                     for(let c=0; c<5; c++){
                         const bIdx = r*5+c;
@@ -326,7 +313,7 @@ function ChatInterface({ displayName, onLogout }) {
                              const vLinesToCheck = next.vLines || prev.vLines;
                              
                              if (isBoxFull(r, c, hLinesToCheck, vLinesToCheck)) {
-                                newBoxes[bIdx] = symbol; // Opponent got this box
+                                newBoxes[bIdx] = symbol; 
                                 boxCompleted = true;
                             }
                         }
@@ -334,16 +321,10 @@ function ChatInterface({ displayName, onLogout }) {
                 }
                 next.boxes = newBoxes;
                 
-                // If opponent completed a box, they keep turn. I do NOT get turn.
-                if (boxCompleted) {
-                    setIsMyTurn(false);
-                } else {
-                    setIsMyTurn(true);
-                }
+                if (boxCompleted) { setIsMyTurn(false); } else { setIsMyTurn(true); }
                 return next;
             });
         } else {
-            // Standard TicTacToe/Connect4
             setBoard((prev) => { const newBoard = [...prev]; newBoard[index] = symbol; return newBoard; });
             setIsMyTurn(true);
         }
@@ -362,18 +343,14 @@ function ChatInterface({ displayName, onLogout }) {
             if ((myMoveVal === 'R' && theirMoveVal === 'S') || (myMoveVal === 'P' && theirMoveVal === 'R') || (myMoveVal === 'S' && theirMoveVal === 'P')) { result = 'me'; } else { result = 'opponent'; }
         }
         setRpsResult({ winner: result, myMove: myMoveVal, theirMove: theirMoveVal });
-        setTimeout(() => { resetGame(); }, 4000);
     });
 
-    // Reaction Game Events
-    socket.on('reaction_green_light', () => {
-        setReactionState('ready');
-    });
+    // --- REACTION GAME EVENTS (SIMPLIFIED) ---
+    socket.on('reaction_green_light', () => { setReactionState('ready'); });
     
     socket.on('reaction_result', ({ winnerId, time }) => {
         const winner = winnerId === socket.id ? 'me' : 'opponent';
         setReactionResult({ winner, time });
-        setTimeout(() => { resetGame(); }, 4000);
     });
 
     return () => socket.disconnect();
@@ -394,16 +371,13 @@ function ChatInterface({ displayName, onLogout }) {
 
     if (winner || isDraw) {
         setGameWinner(winner || 'draw');
-        const timer = setTimeout(() => { resetGame(); }, 4000); 
-        return () => clearTimeout(timer);
     }
   }, [board, activeGameType, gameActive]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isPartnerTyping, replyingTo]);
 
-  // --- NEW: PREVENT NAVIGATION AND REFRESH ---
+  // --- PREVENT NAVIGATION AND REFRESH ---
   useEffect(() => {
-    // 1. Browser Level (Refresh/Close Tab)
     const handleBeforeUnload = (e) => {
       if (status === 'chatting') {
         e.preventDefault();
@@ -411,28 +385,16 @@ function ChatInterface({ displayName, onLogout }) {
         return "Are you sure? You will lose your current chat.";
       }
     };
-
-    // 2. Mobile/History Level (Back Button)
     const handlePopState = (e) => {
        if (status === 'chatting') {
-         // Push state back so they stay on the page
          window.history.pushState(null, document.title, window.location.href);
          alert("Please click 'Stop' to end the chat first.");
        }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
-    
-    // Initial push to ensure we have a history entry to trap
-    if (status === 'chatting') {
-        window.history.pushState(null, document.title, window.location.href);
-    }
-
-    return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-        window.removeEventListener('popstate', handlePopState);
-    };
+    if (status === 'chatting') window.history.pushState(null, document.title, window.location.href);
+    return () => { window.removeEventListener('beforeunload', handleBeforeUnload); window.removeEventListener('popstate', handlePopState); };
   }, [status]);
 
 
@@ -441,8 +403,7 @@ function ChatInterface({ displayName, onLogout }) {
       setGameActive(false); setIncomingRequest(null); setShowGameSelector(false);
       setWaitingForResponse(false); setBoard([]); setStatusMessage(""); setGameWinner(null);
       setRpsMyMove(null); setRpsOpponentMoved(false); setRpsResult(null); 
-      setReactionResult(null); setReactionState('waiting');
-      setActiveGameType(null);
+      setReactionResult(null); setReactionState('waiting'); setActiveGameType(null);
   };
 
   const handleStartChat = () => { setStatus("searching"); getSocket().emit("find_match"); };
@@ -453,22 +414,13 @@ function ChatInterface({ displayName, onLogout }) {
       typingTimeoutRef.current = setTimeout(() => { getSocket().emit('typing', { roomId, isTyping: false }); }, 1000);
   };
   
-  // --- SEND MESSAGE LOGIC ---
   const sendMessage = (e) => {
     e.preventDefault();
     if (message.trim() && status === 'chatting' && roomId) {
-        // Construct the message object with Reply info
         const msgObject = { text: message, replyTo: replyingTo };
-        
-        // Update local state
         setMessages((prev) => [...prev, { ...msgObject, sender: "me" }]);
-        
-        // Send to backend (backend will just forward this object)
         getSocket().emit("send_message", { roomId, message: msgObject });
-        
-        // Reset inputs
-        setMessage(""); 
-        setReplyingTo(null);
+        setMessage(""); setReplyingTo(null);
         getSocket().emit('typing', { roomId, isTyping: false });
     }
   };
@@ -481,80 +433,50 @@ function ChatInterface({ displayName, onLogout }) {
   };
   const handleNewMatch = () => { resetAll(); setStatus("searching"); getSocket().emit("find_match"); };
   const handleMainButton = () => { if (status === 'chatting') handleDisconnectChat(); else handleNewMatch(); };
-  const handleBlock = () => {
-      if (!roomId || !partnerId) return;
-      if (window.confirm("Block user for 10 mins?")) { getSocket().emit('block_user', { roomId, partnerId }); resetAll(); alert("User blocked."); }
-  };
-  const submitReport = async (e) => {
-      e.preventDefault(); setIsSendingReport(true);
-      try { await axios.post('https://guftaguu-backend.onrender.com/api/report', reportData); alert("Sent!"); setShowReportModal(false); } catch (err) { alert("Failed."); } setIsSendingReport(false);
-  };
+  const handleBlock = () => { if (!roomId || !partnerId) return; if (window.confirm("Block user for 10 mins?")) { getSocket().emit('block_user', { roomId, partnerId }); resetAll(); alert("User blocked."); } };
+  const submitReport = async (e) => { e.preventDefault(); setIsSendingReport(true); try { await axios.post('https://guftaguu-backend.onrender.com/api/report', reportData); alert("Sent!"); setShowReportModal(false); } catch (err) { alert("Failed."); } setIsSendingReport(false); };
   const sendGameRequest = (gameType) => { setWaitingForResponse(true); setShowGameSelector(false); getSocket().emit("request_game", { roomId, gameType }); };
   const acceptGame = () => { getSocket().emit("accept_game", { roomId, gameType: incomingRequest }); };
   const declineGame = () => { setIncomingRequest(null); getSocket().emit("decline_game", { roomId }); };
   
-  // --- GENERAL MOVE HANDLER (My Move) ---
+  // --- REPLAY HANDLER ---
+  const handleReplay = () => {
+      const gameToReplay = activeGameType;
+      resetGame();
+      sendGameRequest(gameToReplay);
+  };
+
   const handleGameMove = (indexOrData) => {
       if (activeGameType === 'dotsboxes') {
-          // Dots & Boxes Logic (Local update first)
           const { type, index } = indexOrData;
           let boxCompleted = false;
-
           setBoard(prev => {
               const next = { ...prev };
-              
               if (type === 'h') { next.hLines = [...prev.hLines]; next.hLines[index] = true; }
               if (type === 'v') { next.vLines = [...prev.vLines]; next.vLines[index] = true; }
-
-              // Check if THIS specific move completed a box for ME
               const newBoxes = [...prev.boxes];
-              const isBoxFull = (r, c, h, v) => {
-                if (r<0 || r>=5 || c<0 || c>=5) return false;
-                return h[r*5+c] && h[(r+1)*5+c] && v[r*6+c] && v[r*6+c+1];
-              }
-
+              const isBoxFull = (r, c, h, v) => { if (r<0 || r>=5 || c<0 || c>=5) return false; return h[r*5+c] && h[(r+1)*5+c] && v[r*6+c] && v[r*6+c+1]; }
               for(let r=0; r<5; r++){
                 for(let c=0; c<5; c++){
                     const bIdx = r*5+c;
                     if (!newBoxes[bIdx]) {
-                        const hLinesToCheck = next.hLines || prev.hLines;
-                        const vLinesToCheck = next.vLines || prev.vLines;
-                        
-                        if (isBoxFull(r, c, hLinesToCheck, vLinesToCheck)) {
-                            newBoxes[bIdx] = mySymbol; 
-                            boxCompleted = true;
-                        }
+                        if (isBoxFull(r, c, (next.hLines || prev.hLines), (next.vLines || prev.vLines))) { newBoxes[bIdx] = mySymbol; boxCompleted = true; }
                     }
                 }
               }
               next.boxes = newBoxes;
-              
-              if (boxCompleted) {
-                 setIsMyTurn(true);
-              } else {
-                 setIsMyTurn(false);
-              }
-
+              if (boxCompleted) setIsMyTurn(true); else setIsMyTurn(false);
               return next;
           });
-          
           getSocket().emit("make_move", { roomId, index: 0, symbol: mySymbol, gameType: 'dotsboxes', extraData: { game: 'dotsboxes', type, index } });
-
       } else {
-          // TicTacToe / Connect 4
           const newBoard = [...board]; newBoard[indexOrData] = mySymbol; setBoard(newBoard); setIsMyTurn(false);
           getSocket().emit("make_move", { roomId, index: indexOrData, symbol: mySymbol });
       }
   };
 
   const handleRPSMove = (moveId) => { setRpsMyMove(moveId); getSocket().emit("make_move", { roomId, symbol: moveId, gameType: 'rps' }); };
-  
-  const handleReactionClick = () => {
-      // User clicked green
-      setReactionState('clicked');
-      getSocket().emit("make_move", { roomId, symbol: 'click', gameType: 'reaction' });
-  };
-
+  const handleReactionClick = () => { setReactionState('clicked'); getSocket().emit("make_move", { roomId, symbol: 'click', gameType: 'reaction' }); };
   const isChatEnded = status === "partner_left" || status === "disconnected";
 
   return (
@@ -564,7 +486,7 @@ function ChatInterface({ displayName, onLogout }) {
        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
 
-       {/* HEADER (Unchanged) */}
+       {/* HEADER */}
        <header className="px-6 py-4 border-b border-white/5 bg-black/50 backdrop-blur-sm flex justify-between items-center z-50">
         <div className="flex items-center gap-4">
             <CatLogo className="w-10 h-10" />
@@ -584,11 +506,9 @@ function ChatInterface({ displayName, onLogout }) {
             </div>
         </div>
         <div className="flex gap-2 items-center">
-            {/* LINKEDIN BUTTON (HEADER) */}
             <a href={MY_LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/50 text-xs text-blue-400 hover:bg-blue-500 hover:text-white transition font-bold">
                 <LinkedinIcon size={14} /> <span className="hidden md:inline">Connect</span>
             </a>
-
             <button onClick={() => setShowSupportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/50 text-xs text-yellow-500 hover:bg-yellow-500 hover:text-black transition font-bold"><Coffee size={14} /> <span className="hidden md:inline">Support</span></button>
             <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition"><AlertTriangle size={14} /> <span className="hidden md:inline">Report</span></button>
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
@@ -641,11 +561,8 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="grid grid-cols-2 gap-4">
                         <button onClick={() => sendGameRequest('tictactoe')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">❌⭕</span><span className="font-bold text-sm">Tic-Tac-Toe</span></button>
                         <button onClick={() => sendGameRequest('connect4')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">🔴🟡</span><span className="font-bold text-sm">Connect 4</span></button>
-                        
-                        {/* --- NEW GAMES --- */}
                         <button onClick={() => sendGameRequest('dotsboxes')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><Grid3X3 size={32} className="text-blue-400"/><span className="font-bold text-sm">Dots & Boxes</span></button>
                         <button onClick={() => sendGameRequest('reaction')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><Zap size={32} className="text-yellow-400"/><span className="font-bold text-sm">Reaction Time</span></button>
-
                         <button onClick={() => sendGameRequest('rps')} className="col-span-2 bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">✂️🪨📄</span><span className="font-bold text-sm">Rock Paper Scissors</span></button>
                     </div>
                 </GlassCard>
@@ -667,7 +584,6 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h3 className="text-2xl font-bold animate-pulse">Finding a match...</h3>
-                {/* <MatchmakingAd /> */} 
                 <button onClick={() => setStatus('idle')} className="mt-8 text-zinc-500 hover:text-white underline text-sm">Cancel Search</button>
             </div>
         )}
@@ -676,7 +592,8 @@ function ChatInterface({ displayName, onLogout }) {
              <div className="w-full max-w-6xl flex flex-col md:flex-row gap-4 md:gap-6 h-[92dvh] md:h-[80vh] animate-in fade-in zoom-in-95 duration-300">
                 
                 {gameActive && (
-                    <div className="flex flex-col flex-none h-[45%] md:h-auto md:flex-1 min-h-0">
+                    <div className="flex flex-col flex-none h-[45%] md:h-auto md:flex-1 min-h-0 relative">
+                        {/* GAME BOARD */}
                         {activeGameType === 'rps' ? (
                             <RPSBoard onMove={handleRPSMove} myMove={rpsMyMove} opponentMoved={rpsOpponentMoved} result={rpsResult} />
                         ) : activeGameType === 'reaction' ? (
@@ -684,10 +601,43 @@ function ChatInterface({ displayName, onLogout }) {
                         ) : (
                             <GameBoard gameType={activeGameType} board={board} onMove={handleGameMove} winner={gameWinner} mySymbol={mySymbol} isMyTurn={isMyTurn} statusMessage={statusMessage} />
                         )}
+
+                        {/* PLAY AGAIN / RESULT OVERLAY - Show for non-reaction games or when reaction hasn't shown result yet */}
+                        {((gameWinner || rpsResult) || (reactionResult && activeGameType !== 'reaction')) && (
+                            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20 backdrop-blur-sm rounded-xl">
+                                <h3 className="text-3xl font-bold mb-6 text-white tracking-tight">
+                                    {activeGameType === 'rps' && rpsResult.winner === 'draw' ? "It's a Draw!" :
+                                     activeGameType === 'rps' ? (rpsResult.winner === 'me' ? "You Won!" : "You Lost!") :
+                                     gameWinner === 'draw' ? "It's a Draw!" :
+                                     (gameWinner === mySymbol) ? "You Won!" : "You Lost!"}
+                                </h3>
+                                <div className="flex gap-4">
+                                    <button onClick={handleReplay} className="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-gray-200 flex items-center gap-2">
+                                        <Repeat size={18} /> Play Again
+                                    </button>
+                                    <button onClick={resetGame} className="bg-zinc-800 text-white px-6 py-2 rounded-full font-bold hover:bg-zinc-700">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* REACTION GAME PLAY AGAIN BUTTONS - Below the result display */}
+                        {activeGameType === 'reaction' && reactionResult && (
+                            <div className="absolute bottom-4 left-0 right-0 flex gap-4 justify-center z-20 px-4">
+                                <button onClick={handleReplay} className="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-gray-200 flex items-center gap-2 shadow-lg">
+                                    <Repeat size={18} /> Play Again
+                                </button>
+                                <button onClick={resetGame} className="bg-zinc-800 text-white px-6 py-2 rounded-full font-bold hover:bg-zinc-700 shadow-lg">
+                                    Close
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
                 
                 <GlassCard className="flex-1 flex flex-col overflow-hidden min-h-0">
+                    {/* CHAT HEADER */}
                     <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center bg-black/20 shrink-0">
                          <div className="flex items-center gap-2 md:gap-3">
                              <div className={`w-2 h-2 rounded-full ${isChatEnded ? "bg-red-500" : "bg-green-500 shadow-[0_0_10px_#22c55e]"}`}></div>
@@ -713,7 +663,7 @@ function ChatInterface({ displayName, onLogout }) {
                          </div>
                     </div>
                     
-                    {/* MESSAGE LIST WITH SWIPE SUPPORT */}
+                    {/* MESSAGES */}
                     <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                          {messages.map((msg, index) => (
                              <SwipeableMessage key={index} msg={msg} onReply={setReplyingTo} />
@@ -723,9 +673,9 @@ function ChatInterface({ displayName, onLogout }) {
                         <div ref={messagesEndRef} />
                     </div>
 
+                    {/* INPUT AREA */}
                     {status === "chatting" ? (
                         <div className="flex flex-col bg-black/20 shrink-0">
-                            {/* REPLY PREVIEW BAR */}
                             {replyingTo && (
                                 <div className="flex items-center justify-between bg-zinc-800/80 backdrop-blur border-t border-white/5 px-4 py-2 border-l-4 border-l-blue-400 mx-4 mt-2 rounded-r-lg">
                                     <div className="flex flex-col overflow-hidden">
@@ -736,7 +686,6 @@ function ChatInterface({ displayName, onLogout }) {
                                 </div>
                             )}
 
-                            {/* INPUT FORM */}
                             <form onSubmit={sendMessage} className="p-3 md:p-4 border-t border-white/10 flex gap-2 md:gap-3">
                                 <input type="text" value={message} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-base md:text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" />
                                 <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50" disabled={!message.trim()}>
@@ -754,13 +703,12 @@ function ChatInterface({ displayName, onLogout }) {
         )}
       </main>
       
-      {/* VERCEL ANALYTICS COMPONENT */}
       <Analytics />
     </div>
   );
 }
 
-// --- LEGAL & NAME SCREENS (Unchanged, copied from your original) ---
+// --- LEGAL & NAME SCREENS ---
 const LegalScreen = ({ onAgree }) => {
     const [checked, setChecked] = useState(false);
     return (
@@ -819,12 +767,9 @@ const NameScreen = ({ onStart }) => {
             <footer className="mt-12 text-xs text-zinc-600 flex gap-6 items-center">
                 <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
                 <Link to="/terms" className="hover:text-white transition">Terms</Link>
-                
-                {/* LINKEDIN BUTTON (FOOTER) - CORRECTED USAGE */}
                 <a href={MY_LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition flex items-center gap-1">
                     <LinkedinIcon size={12}/> Developer
                 </a>
-                
                 <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition flex items-center gap-1 font-bold text-yellow-600/80"><Coffee size={12}/> Support Dev</button>
             </footer>
             {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
@@ -848,7 +793,6 @@ const StaticPage = ({ title, content }) => (
     </div>
 );
 
-// --- PAGE CONTENT ---
 const PAGE_CONTENT = {
     privacy: `**1. No Personal Data Collection**\nGuftaguu is designed to be completely anonymous. We do not ask for your email, phone number, or real name. We do not track your location.\n\n**2. No Chat Logs**\nYour conversations are peer-to-peer. Once you disconnect from a chat, the messages are deleted from your browser and are not stored in any permanent database on our servers.\n\n**3. Temporary Data**\nWe use "Local Storage" on your device only to remember your Display Name so you don't have to type it every time. You can clear this by clearing your browser cache.\n\n**4. Data Security**\nWhile we do not store chats, please remember that you are talking to strangers. Do not share personal information (like your address, passwords, or financial details) with anyone. We are not responsible for information you voluntarily share.`,
     terms: `**1. Acceptance of Terms**\nBy using Guftaguu, you agree to these terms. If you do not agree, please do not use the service. You must be 18+ to use this site.\n\n**2. User Conduct**\nWe have a zero-tolerance policy for:\n- Harassment, bullying, or hate speech.\n- Sharing illegal content or pornography.\n- Spamming or advertising.\n- Attempting to bypass bans.\n\n**3. Account Termination**\nWe reserve the right to ban users who violate these rules. Bans are based on IP address and device fingerprints.\n\n**4. Disclaimer**\nGuftaguu is provided "as is". We are not responsible for the conduct of any user. Interactions with strangers are at your own risk.`,

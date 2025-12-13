@@ -117,7 +117,7 @@ io.on('connection', (socket) => {
         
         io.to(roomId).emit('game_start', { gameType, starterId: socket.id });
 
-        // REACTION GAME SERVER LOGIC
+        // REACTION GAME SERVER LOGIC (SIMPLIFIED - SINGLE ROUND)
         if (gameType === 'reaction') {
             reactionState[roomId] = { active: false, startTime: 0, winnerDeclared: false };
             setTimeout(() => {
