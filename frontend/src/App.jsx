@@ -245,43 +245,45 @@ function ChatInterface({ displayName, onLogout }) {
   const getSocket = () => socketRef.current;
 
   useEffect(() => {
-    // Enhanced socket configuration with reconnection
-    socketRef.current = io.connect("https://guftaguu-backend.onrender.com", {
-        reconnection: true,           // Enable auto-reconnection
-        reconnectionAttempts: 10,     // INCREASED: Try more times
-        reconnectionDelay: 1000,      // Wait 1s between attempts
-        reconnectionDelayMax: 5000,   // Max 5s wait
-        timeout: 20000,               // Connection timeout
-        transports: ['websocket', 'polling'], // Fallback to polling
-        forceNew: true                // Force new connection
-    });
+    // --- FIXED CONNECTION LOGIC ---
+    // Removed "forceNew: true" to prevent ghost connections
+    if (!socketRef.current) {
+        socketRef.current = io("https://guftaguu-backend.onrender.com", {
+            reconnection: true,
+            reconnectionAttempts: 15,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            transports: ['websocket'], // Prefer websocket
+        });
+    }
     
     const socket = socketRef.current;
+
+    // Ensure socket is connected
+    if (!socket.connected) {
+        socket.connect();
+    }
 
     // ===== CONNECTION STATE HANDLERS =====
     socket.on('connect', () => {
         console.log('✅ Connected to server');
         setIsConnected(true);
-        
         // If we were in a chat and reconnected, try to rejoin
         if (roomId && status === 'chatting') {
             console.log('🔄 Attempting to rejoin room after reconnection...');
-            // You might want to emit a rejoin event here if you implement it server-side
         }
     });
 
     socket.on('reconnect_attempt', () => setIsReconnecting(true));
     socket.on('reconnect', () => setIsReconnecting(false));
-    socket.on('connect', () => setIsReconnecting(false));
 
     socket.on('disconnect', (reason) => {
         console.log('❌ Disconnected:', reason);
         setIsConnected(false);
-        
-        // If we were chatting, notify user
-        if (status === 'chatting') {
-            setStatus("partner_left");
-            alert("Connection lost! Your chat partner may have disconnected.");
+        // Only show "partner left" if we were actually chatting
+        if (status === 'chatting' && reason !== "io client disconnect") {
+            // Wait a moment before declaring them gone (they might reconnect)
         }
     });
 
@@ -293,10 +295,6 @@ function ChatInterface({ displayName, onLogout }) {
     socket.on('reconnect', (attemptNumber) => {
         console.log(`🔄 Reconnected after ${attemptNumber} attempts`);
         setIsConnected(true);
-    });
-
-    socket.on('reconnect_attempt', (attemptNumber) => {
-        console.log(`🔄 Reconnection attempt ${attemptNumber}...`);
     });
 
     socket.on('reconnect_failed', () => {
@@ -323,9 +321,9 @@ function ChatInterface({ displayName, onLogout }) {
             const pongTimeout = setTimeout(() => {
                 console.warn('⚠️ No pong received - connection may be dead');
                 // You could force a reconnection here
-                socket.disconnect();
-                socket.connect();
-            }, 10000); // FIX: Increased to 10s to prevent false disconnects under load
+                // socket.disconnect();
+                // socket.connect();
+            }, 10000); 
             
             socket.once('pong', () => {
                 clearTimeout(pongTimeout);
@@ -491,8 +489,12 @@ function ChatInterface({ displayName, onLogout }) {
     // ===== CLEANUP =====
     return () => {
         clearInterval(heartbeatInterval);
-        socket.off(); // Remove all listeners
-        socket.disconnect();
+        socket.off(); // Remove listeners but keep socket alive if needed
+        // We do NOT disconnect here unless component unmounts for real
+        // But since displayName changes trigger this, we need to be careful.
+        // For this simple app, disconnecting on change is safer for logic, 
+        // BUT we removed forceNew, so reconnection is smoother.
+        socket.disconnect(); 
     };
 }, [displayName]);
 

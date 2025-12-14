@@ -51,42 +51,62 @@ io.on('connection', (socket) => {
         socket.emit('pong');
     });
 
-    // --- MATCHMAKING ---
+    // --- MATCHMAKING (FIXED) ---
+// --- MATCHMAKING (WITH DELAY FIX) ---
     socket.on('find_match', async () => {
-        console.log(`User ${socket.id} looking for match...`);
+        // 1. Remove self from queue
+        await redis.lrem('waiting_queue', 0, socket.id);
+
         let partnerId = await redis.rpop('waiting_queue');
         
-        // REMOVED: attempts counter to prevent giving up too early
-        
-        while (partnerId) {
-            // OPTIMIZATION: Check both block statuses in parallel using Promise.all
-            const [iBlockedThem, theyBlockedMe] = await Promise.all([
-                redis.get(`block:${socket.id}:${partnerId}`),
-                redis.get(`block:${partnerId}:${socket.id}`)
-            ]);
-            
-            const partnerSocket = io.sockets.sockets.get(partnerId);
-            const isValidUser = partnerSocket && partnerId !== socket.id;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 10; 
 
-            if (isValidUser && !iBlockedThem && !theyBlockedMe) {
-                const roomId = `${partnerId}-${socket.id}`;
-                partnerSocket.join(roomId);
-                socket.join(roomId);
-                userRooms[partnerId] = roomId;
-                userRooms[socket.id] = roomId;
-                io.to(roomId).emit('match_found', { roomId, partnerId });
-                return; 
+        while (partnerId) {
+            if (partnerId === socket.id) {
+                partnerId = await redis.rpop('waiting_queue');
+                continue;
             }
+
+            const partnerSocket = io.sockets.sockets.get(partnerId);
+            const isPartnerBusy = partnerSocket && userRooms[partnerId]; 
             
-            // Only push back if the user is actually valid (socket exists) but was skipped due to blocks/same-id
-            if (partnerSocket && partnerId !== socket.id) {
+            if (partnerSocket && !isPartnerBusy) {
+                const [iBlockedThem, theyBlockedMe] = await Promise.all([
+                    redis.get(`block:${socket.id}:${partnerId}`),
+                    redis.get(`block:${partnerId}:${socket.id}`)
+                ]);
+
+                if (!iBlockedThem && !theyBlockedMe) {
+                    console.log(`✅ MATCH FOUND! Pairing ${socket.id} with ${partnerId}`);
+                    
+                    const roomId = `${partnerId}-${socket.id}`;
+                    
+                    await partnerSocket.join(roomId);
+                    await socket.join(roomId);
+                    
+                    userRooms[partnerId] = roomId;
+                    userRooms[socket.id] = roomId;
+                    
+                    // --- THE FIX: WAIT 100ms ---
+                    // Give sockets time to update their subscriptions before emitting
+                    await new Promise(resolve => setTimeout(resolve, 100));
+
+                    io.to(roomId).emit('match_found', { roomId, partnerId });
+                    return; 
+                }
+            }
+
+            if (partnerSocket) {
                 await redis.lpush('waiting_queue', partnerId);
             }
             
-            // REMOVED: if (attempts >= 5) break; 
+            attempts++;
+            if (attempts >= MAX_ATTEMPTS) break;
             
             partnerId = await redis.rpop('waiting_queue');
         }
+
         await redis.lpush('waiting_queue', socket.id);
     });
 
