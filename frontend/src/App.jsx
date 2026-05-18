@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Coffee, Users, Zap, Grid3X3, Reply, LinkedinIcon, Repeat } from 'lucide-react';
+import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Users, Zap, Grid3X3, Reply, Repeat } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/react"
 
 // Import Your Custom Logo
@@ -13,9 +13,7 @@ import logoImage from './assets/logo.png';
 import { GameBoard, RPSBoard, ReactionBoard, checkTicTacToeWinner, checkConnect4Winner, checkDotsBoxesWinner } from './components/GameComponents';
 
 // --- CONFIGURATION ---
-const MY_UPI_ID = "akshaanshhh1133@oksbi"; 
-const MY_NAME = "Guftaguu Dev";
-const MY_LINKEDIN_URL = "https://www.linkedin.com/in/11akshaansh";
+
 
 // --- SOUND UTILS ---
 const playConnectSound = () => {
@@ -150,22 +148,6 @@ const SwipeableMessage = ({ msg, onReply }) => {
     );
 };
 
-// --- SUPPORT MODAL ---
-const SupportModal = ({ onClose }) => (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-in fade-in duration-200">
-        <GlassCard className="w-full max-w-sm p-6 text-center relative">
-            <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><X size={20}/></button>
-            <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-500"><Coffee size={32} /></div>
-            <h3 className="text-xl font-bold mb-2">Buy me a Chai? ☕</h3>
-            <p className="text-zinc-400 mb-6 text-sm">Servers aren't free! If you're having fun, a small contribution helps keep Guftaguu alive.</p>
-            <div className="bg-white p-3 rounded-xl mb-4 mx-auto w-48 h-48 shadow-lg shadow-white/5">
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${MY_UPI_ID}&pn=${encodeURIComponent(MY_NAME)}&cu=INR`} alt="UPI QR Code" className="w-full h-full object-contain" />
-            </div>
-            <p className="text-xs text-zinc-500 mb-2">Scan with GPay, Paytm, PhonePe</p>
-            <div className="bg-black/50 border border-white/10 p-2 rounded text-xs font-mono text-zinc-400 select-all">{MY_UPI_ID}</div>
-        </GlassCard>
-    </div>
-);
 
 const ConnectionStatusBanner = ({ isConnected, isReconnecting }) => {
     if (isConnected && !isReconnecting) return null; // Don't show if everything is fine
@@ -237,7 +219,7 @@ function ChatInterface({ displayName, onLogout }) {
   // Modals
   const [showGameSelector, setShowGameSelector] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [showSupportModal, setShowSupportModal] = useState(false); 
+  
   
   const [reportData, setReportData] = useState({ title: "", description: "", type: "Bug Report" });
   const [isSendingReport, setIsSendingReport] = useState(false);
@@ -668,10 +650,6 @@ function ChatInterface({ displayName, onLogout }) {
             </div>
         </div>
         <div className="flex gap-2 items-center">
-            <a href={MY_LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/50 text-xs text-blue-400 hover:bg-blue-500 hover:text-white transition font-bold">
-                <LinkedinIcon size={14} /> <span className="hidden md:inline">Connect</span>
-            </a>
-            <button onClick={() => setShowSupportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/50 text-xs text-yellow-500 hover:bg-yellow-500 hover:text-black transition font-bold"><Coffee size={14} /> <span className="hidden md:inline">Support</span></button>
             <button onClick={() => setShowReportModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition"><AlertTriangle size={14} /> <span className="hidden md:inline">Report</span></button>
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 shadow-[0_0_10px_#22c55e]" : "bg-red-500"}`}></div>
@@ -682,7 +660,6 @@ function ChatInterface({ displayName, onLogout }) {
       </header>
 
        {/* MODALS */}
-       {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
        {showReportModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
             <GlassCard className="w-full max-w-md p-6">
@@ -915,7 +892,7 @@ const LegalScreen = ({ onAgree }) => {
 
 const NameScreen = ({ onStart }) => {
     const [name, setName] = useState("");
-    const [showSupport, setShowSupport] = useState(false);
+    
     return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
@@ -929,12 +906,8 @@ const NameScreen = ({ onStart }) => {
             <footer className="mt-12 text-xs text-zinc-600 flex gap-6 items-center">
                 <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
                 <Link to="/terms" className="hover:text-white transition">Terms</Link>
-                <a href={MY_LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition flex items-center gap-1">
-                    <LinkedinIcon size={12}/> Developer
-                </a>
-                <button onClick={() => setShowSupport(true)} className="hover:text-yellow-500 transition flex items-center gap-1 font-bold text-yellow-600/80"><Coffee size={12}/> Support Dev</button>
             </footer>
-            {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
+            
         </div>
     );
 };
