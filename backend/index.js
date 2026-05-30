@@ -82,11 +82,18 @@ io.on('connection', (socket) => {
             console.log(`🔄 Auto-rejoining user ${userId} to active room ${activeRoomId}`);
             socket.join(activeRoomId);
             
+            // Find who the partner was
+            const partnerUserId = activeRoomId.split('-').find(id => id !== userId);
+            
             // Notify the partner that user is back online
             socket.to(activeRoomId).emit('partner_status_change', { status: 'active' });
             
-            // Let the client know the rejoin was successful
-            socket.emit('rejoined_room', { roomId: activeRoomId });
+            // Let the client know the rejoin was successful along with partner info
+            socket.emit('rejoined_room', { 
+                roomId: activeRoomId, 
+                partnerId: partnerUserId,
+                partnerName: activeUsers[partnerUserId]?.name || 'Stranger'
+            });
         } else if (clientRoomId) {
             // Client reported a roomId but server doesn't have it (expired/closed)
             console.log(`💀 Client reported roomId ${clientRoomId} but server has no record. Declaring connection dead.`);

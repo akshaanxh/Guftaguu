@@ -344,8 +344,11 @@ function ChatInterface({ displayName, onLogout }) {
         socket.emit('send_name', { roomId, name: displayName });
     });
 
-    socket.on('rejoined_room', ({ roomId }) => {
+    socket.on('rejoined_room', ({ roomId, partnerId, partnerName }) => {
         console.log(`✨ Rejoined active room: ${roomId}`);
+        setRoomId(roomId);
+        setPartnerId(partnerId);
+        setPartnerName(partnerName);
         setStatus("chatting");
         setPartnerStatus('active');
     });

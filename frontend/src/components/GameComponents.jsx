@@ -439,10 +439,10 @@ export const ChessBoardGame = ({
                          <p className="text-zinc-400 text-[11px] mb-4">Stranger is offering a draw. End the game peacefully?</p>
                          <div className="flex gap-2.5 justify-center">
                              <button onClick={onAcceptDraw} className="flex-1 bg-white text-black text-xs font-bold py-2 rounded-lg hover:bg-gray-200 transition active:scale-95">
-                                 Accept
+                                 Yes
                              </button>
                              <button onClick={onDeclineDraw} className="flex-1 bg-zinc-800 text-zinc-300 text-xs font-bold py-2 rounded-lg hover:bg-zinc-700 border border-white/5 transition active:scale-95">
-                                 Decline
+                                 No
                              </button>
                          </div>
                      </div>
@@ -473,23 +473,27 @@ export const ChessBoardGame = ({
                           lightSquareStyle: { backgroundColor: '#ebecd0' },
                       }}
                    />
-                   {myTime && (
-                       <div className="w-full flex justify-between items-center mt-2 px-1">
+                   
+                   {/* Bottom Control Bar containing Clocks and Draw Button */}
+                   <div className="w-full flex justify-between items-center mt-2 px-1">
+                       {myTime ? (
                            <div className={`font-mono text-base md:text-xl font-bold px-3 py-1.5 rounded-lg transition-colors ${isMyTurnNow ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
                                {myTime}
                            </div>
-                           
-                           {/* Draw Offer Button */}
-                           {onOfferDraw && !game.isGameOver() && (
-                               <button 
-                                   onClick={onOfferDraw}
-                                   className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-white/10 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 active:scale-95"
-                               >
-                                   🤝 Offer Draw
-                               </button>
-                           )}
-                       </div>
-                   )}
+                       ) : (
+                           <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Unlimited</div>
+                       )}
+                       
+                       {/* Draw Offer Button - ALWAYS visible when active game is ongoing */}
+                       {onOfferDraw && !game.isGameOver() && (
+                           <button 
+                               onClick={onOfferDraw}
+                               className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-white/10 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 active:scale-95"
+                           >
+                               🤝 Offer Draw
+                           </button>
+                       )}
+                   </div>
               </div>
         </div>
     );
