@@ -1,5 +1,6 @@
-import React from 'react';
-
+import React, { useState, useEffect } from 'react';
+import { Chess } from 'chess.js';
+import { Chessboard } from 'react-chessboard';
 // --- 1. WIN LOGIC HELPERS ---
 export const checkTicTacToeWinner = (squares) => {
   if (!Array.isArray(squares)) return null;
@@ -190,42 +191,261 @@ export const GameBoard = ({ gameType, board, onMove, winner, mySymbol, isMyTurn,
     );
 };
 
-export const RPSBoard = ({ onMove, myMove, opponentMoved, result }) => {
-    const choices = [ { id: 'R', label: '🪨', name: 'Rock' }, { id: 'P', label: '📄', name: 'Paper' }, { id: 'S', label: '✂️', name: 'Scissor' } ];
+export const ChessBoardGame = ({ gameState, onMove, mySymbol, isMyTurn, statusMessage, onGameEnd }) => {
+    const [game, setGame] = useState(new Chess());
+    const [optionSquares, setOptionSquares] = useState({});
+    const [selectedSquare, setSelectedSquare] = useState(null);
+    
+    // Promotion state
+    const [pendingPromotion, setPendingPromotion] = useState(null); // { from, to }
+    
+    // Timer state
+    const [whiteTime, setWhiteTime] = useState(null);
+    const [blackTime, setBlackTime] = useState(null);
 
-    if (result) {
-        return (
-            <div className="flex flex-col flex-1 bg-zinc-900 rounded-xl border border-white/10 p-4 items-center justify-center min-h-[300px]">
-                <h3 className="text-xl md:text-2xl font-bold mb-4 text-white">Result</h3>
-                <div className="flex gap-4 md:gap-8 items-center text-2xl md:text-4xl mb-6">
-                    <div className="text-center"><div className="text-xs text-slate-400 mb-2">You</div><div className="p-3 md:p-4 bg-zinc-800 rounded-full border-2 border-green-500">{choices.find(c => c.id === result.myMove)?.label}</div></div>
-                    <div className="text-xs text-slate-500 font-mono">VS</div>
-                    <div className="text-center"><div className="text-xs text-slate-400 mb-2">Opponent</div><div className="p-3 md:p-4 bg-zinc-800 rounded-full border-2 border-red-500">{choices.find(c => c.id === result.theirMove)?.label}</div></div>
-                </div>
-                <div className={`text-xl md:text-3xl font-bold ${result.winner === 'draw' ? 'text-yellow-400' : result.winner === 'me' ? 'text-green-400' : 'text-red-500'}`}>
-                    {result.winner === 'draw' ? "It's a Draw!" : result.winner === 'me' ? "You Won! 🎉" : "You Lost 💀"}
-                </div>
-            </div>
-        );
+    // Sync board from incoming gameState
+    useEffect(() => {
+        const newGame = new Chess();
+        if (gameState && gameState.fen && gameState.fen !== 'start') {
+            try { newGame.load(gameState.fen); } catch(e) { console.error('FEN load error:', e); }
+        }
+        setGame(newGame);
+        // Clear any selection when board updates from opponent
+        setSelectedSquare(null);
+        setOptionSquares({});
+        setPendingPromotion(null);
+
+        if (gameState) {
+            if (gameState.whiteTime !== undefined) setWhiteTime(gameState.whiteTime);
+            if (gameState.blackTime !== undefined) setBlackTime(gameState.blackTime);
+        }
+    }, [gameState]);
+
+    // Timer countdown
+    useEffect(() => {
+        if (whiteTime === null || blackTime === null) return;
+        if (game.isGameOver()) return;
+
+        const interval = setInterval(() => {
+            if (game.turn() === 'w') {
+                setWhiteTime(prev => {
+                    if (prev <= 1) { onGameEnd && onGameEnd(mySymbol === 'X' ? 'my_timeout' : 'opponent_timeout'); return 0; }
+                    return prev - 1;
+                });
+            } else {
+                setBlackTime(prev => {
+                    if (prev <= 1) { onGameEnd && onGameEnd(mySymbol === 'O' ? 'my_timeout' : 'opponent_timeout'); return 0; }
+                    return prev - 1;
+                });
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [game.turn(), whiteTime, blackTime, mySymbol, onGameEnd, game]);
+
+    // Detect checkmate/draw
+    useEffect(() => {
+        if (game.isCheckmate()) {
+            const winnerIsWhite = game.turn() === 'b';
+            const amIWhite = mySymbol === 'X';
+            onGameEnd && onGameEnd(winnerIsWhite === amIWhite ? 'me' : 'opponent');
+        } else if (game.isDraw()) {
+            onGameEnd && onGameEnd('draw');
+        }
+    }, [game, mySymbol, onGameEnd]);
+
+    const formatTime = (seconds) => {
+        if (seconds === null) return null;
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    // Determine whose turn it is based on the engine, not socket state
+    const amIWhite = mySymbol === 'X';
+    const myColor = amIWhite ? 'w' : 'b';
+    const isMyTurnNow = game.turn() === myColor;
+
+    const showMoveOptions = (square) => {
+        const moves = game.moves({ square, verbose: true });
+        if (moves.length === 0) {
+            setOptionSquares({});
+            return false;
+        }
+        const newSquares = {};
+        moves.forEach(move => {
+            const targetPiece = game.get(move.to);
+            const isCapture = targetPiece !== null || move.flags.includes('e');
+            if (isCapture) {
+                // Red tint on the entire tile for captures
+                newSquares[move.to] = { background: 'rgba(239, 68, 68, 0.45)' };
+            } else {
+                // Solid black dot for normal moves
+                newSquares[move.to] = {
+                    background: 'radial-gradient(circle, rgba(0, 0, 0, 0.65) 22%, transparent 23%)',
+                    borderRadius: '50%',
+                };
+            }
+        });
+        newSquares[square] = { background: 'rgba(255, 255, 0, 0.4)' };
+        setOptionSquares(newSquares);
+        return true;
+    };
+
+    // Execute a move (used for normal moves and after promotion choice)
+    const executeMove = (from, to, promotionPiece) => {
+        const gameCopy = new Chess(game.fen());
+        try {
+            const move = gameCopy.move({ from, to, promotion: promotionPiece || undefined });
+            if (move) {
+                setGame(gameCopy);
+                onMove({ fen: gameCopy.fen(), whiteTime, blackTime });
+            }
+        } catch (e) {
+            console.error('Move error:', e);
+        }
+        setSelectedSquare(null);
+        setOptionSquares({});
+    };
+
+    // Handle promotion piece choice from dialog
+    const handlePromotionChoice = (piece) => {
+        if (!pendingPromotion) return;
+        executeMove(pendingPromotion.from, pendingPromotion.to, piece);
+        setPendingPromotion(null);
+    };
+
+    // Click handler — receives { piece, square } from react-chessboard v5
+    const handleSquareClick = (clickData) => {
+        const square = typeof clickData === 'object' ? clickData.square : clickData;
+        if (!square) return;
+
+        if (pendingPromotion) return; // Block clicks while promotion dialog is open
+        if (!isMyTurnNow) return;
+        
+        const clickedPiece = game.get(square);
+
+        // No piece selected yet — try to select one
+        if (!selectedSquare) {
+            if (clickedPiece && clickedPiece.color === myColor) {
+                setSelectedSquare(square);
+                showMoveOptions(square);
+            }
+            return;
+        }
+
+        // If clicking another own piece, switch selection
+        if (clickedPiece && clickedPiece.color === myColor) {
+            setSelectedSquare(square);
+            showMoveOptions(square);
+            return;
+        }
+
+        // Check if this is a promotion move
+        const movingPiece = game.get(selectedSquare);
+        const isPromotion = movingPiece && movingPiece.type === 'p' && 
+            ((myColor === 'w' && square[1] === '8') || (myColor === 'b' && square[1] === '1'));
+
+        if (isPromotion) {
+            // Validate move is legal before showing dialog
+            const testGame = new Chess(game.fen());
+            try {
+                const testMove = testGame.move({ from: selectedSquare, to: square, promotion: 'q' });
+                if (testMove) {
+                    setPendingPromotion({ from: selectedSquare, to: square });
+                    return; // Wait for user choice
+                }
+            } catch(e) {}
+            setSelectedSquare(null);
+            setOptionSquares({});
+            return;
+        }
+
+        // Normal move
+        executeMove(selectedSquare, square, undefined);
+    };
+
+    const isCheck = game.inCheck();
+    const isMate = game.isCheckmate();
+    const isDraw = game.isDraw();
+    const boardOrientation = amIWhite ? 'white' : 'black';
+    
+    let displayMessage = '';
+    if (isMate) {
+        displayMessage = game.turn() === myColor ? 'You got Checkmated 😢' : 'You Won by Checkmate! 🎉';
+    } else if (isDraw) {
+        displayMessage = 'Draw! 🤝';
+    } else if (isCheck) {
+        displayMessage = game.turn() === myColor ? '🚨 YOU ARE IN CHECK!' : '🚨 OPPONENT IN CHECK!';
+    } else {
+        displayMessage = isMyTurnNow ? '👇 YOUR TURN' : '⏳ OPPONENT\'S TURN...';
     }
 
+    const oppTime = amIWhite ? formatTime(blackTime) : formatTime(whiteTime);
+    const myTime = amIWhite ? formatTime(whiteTime) : formatTime(blackTime);
+    const isOppTurn = game.turn() !== myColor;
+
+    const promotionPieces = [
+        { piece: 'q', label: '♛', name: 'Queen' },
+        { piece: 'r', label: '♜', name: 'Rook' },
+        { piece: 'b', label: '♝', name: 'Bishop' },
+        { piece: 'n', label: '♞', name: 'Knight' },
+    ];
+
     return (
-        <div className="flex flex-col flex-1 bg-zinc-900 rounded-xl border border-white/10 p-4 items-center justify-center min-h-[300px]">
-            <h3 className="text-lg md:text-xl font-bold mb-6 font-mono text-white">Rock Paper Scissors</h3>
-            <div className="flex gap-2 md:gap-4 mb-6">
-                {choices.map((choice) => (
-                    <button key={choice.id} onClick={() => onMove(choice.id)} disabled={!!myMove} className={`p-3 md:p-6 rounded-xl border-2 transition-all active:scale-95 ${myMove === choice.id ? "bg-white text-black border-white scale-105" : "bg-black text-white border-zinc-700"} ${myMove && myMove !== choice.id ? "opacity-30" : ""}`}>
-                        <div className="text-3xl md:text-5xl mb-1 md:mb-2">{choice.label}</div>
-                        <div className="text-[10px] md:text-xs font-bold uppercase">{choice.name}</div>
-                    </button>
-                ))}
-            </div>
-            <div className="text-center h-6 text-xs md:text-sm font-mono">
-                {myMove && !opponentMoved && <span className="text-yellow-400 animate-pulse">Waiting...</span>}
-                {opponentMoved && !myMove && <span className="text-red-400 font-bold animate-bounce">Opponent ready!</span>}
-                {myMove && opponentMoved && <span className="text-green-400">Revealing...</span>}
-                {!myMove && !opponentMoved && <span className="text-slate-500">Pick one</span>}
-            </div>
+        <div className="flex flex-col flex-1 bg-zinc-900 rounded-xl border border-white/10 p-2 md:p-4 items-center justify-center relative min-h-[350px]">
+             {statusMessage && <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10 font-bold text-white rounded-xl">{statusMessage}</div>}
+             
+             {/* PROMOTION DIALOG */}
+             {pendingPromotion && (
+                 <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-30 rounded-xl">
+                     <div className="bg-zinc-800 border border-white/10 rounded-2xl p-5 text-center">
+                         <h4 className="text-white font-bold text-lg mb-4">Promote Pawn</h4>
+                         <div className="flex gap-3">
+                             {promotionPieces.map(({ piece, label, name }) => (
+                                 <button
+                                     key={piece}
+                                     onClick={() => handlePromotionChoice(piece)}
+                                     className="w-16 h-16 bg-zinc-700 hover:bg-zinc-600 border border-white/10 rounded-xl flex items-center justify-center text-4xl transition-all hover:scale-110 active:scale-95"
+                                     title={name}
+                                 >
+                                     {label}
+                                 </button>
+                             ))}
+                         </div>
+                     </div>
+                 </div>
+             )}
+
+             <div className="w-full flex justify-between items-center mb-2 px-2 max-w-[320px]">
+                 <h3 className="text-lg md:text-xl font-bold font-mono text-white">Chess</h3>
+                 <div className={`text-xs font-bold px-2 py-1 rounded ${isCheck || isMate ? 'bg-red-500/20 text-red-500' : 'bg-black/40 text-slate-400'}`}>
+                     {displayMessage}
+                 </div>
+             </div>
+             
+             <div className="w-full max-w-[320px] flex flex-col gap-2 mx-auto">
+                  {oppTime && (
+                      <div className={`self-end font-mono text-xl md:text-2xl font-bold px-4 py-2 rounded-lg transition-colors ${isOppTurn ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
+                          {oppTime}
+                      </div>
+                  )}
+                  <Chessboard 
+                     options={{
+                         position: game.fen(),
+                         onSquareClick: handleSquareClick,
+                         squareStyles: optionSquares,
+                         boardOrientation: boardOrientation,
+                         allowDragging: false,
+                         darkSquareStyle: { backgroundColor: '#779556' },
+                         lightSquareStyle: { backgroundColor: '#ebecd0' },
+                     }}
+                  />
+                  {myTime && (
+                      <div className={`self-end font-mono text-xl md:text-2xl font-bold px-4 py-2 rounded-lg transition-colors ${isMyTurnNow ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
+                          {myTime}
+                      </div>
+                  )}
+             </div>
         </div>
     );
 };

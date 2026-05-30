@@ -38,76 +38,128 @@ const io = new Server(server, {
     transports: ['websocket', 'polling'] // Allow fallback to polling if websocket fails
 });
 
-// --- GLOBAL VARIABLES ---
-const userRooms = {}; 
-const rpsMoves = {}; 
-const reactionState = {};
+// --- SESSION & CONNECTION TRACKING ---
+const activeUsers = {};    // userId -> { socketId, name, status, disconnectTimer }
+const socketUserMap = {};  // socket.id -> userId
+const userRooms = {};      // userId -> roomId
+const reactionState = {};  // roomId -> reaction game state
 
 io.on('connection', (socket) => {
-    console.log(`User Connected: ${socket.id}`);
+    const userId = socket.handshake.auth.userId;
+    let initialName = socket.handshake.auth.name || 'Stranger';
+    const clientRoomId = socket.handshake.auth.roomId;
+
+    if (userId) {
+        console.log(`👤 User session identified: ${userId} (${initialName})`);
+        socketUserMap[socket.id] = userId;
+
+        // If the user already has a session
+        const existingUser = activeUsers[userId];
+        if (existingUser) {
+            // Clear any active disconnect timer
+            if (existingUser.disconnectTimer) {
+                clearTimeout(existingUser.disconnectTimer);
+                existingUser.disconnectTimer = null;
+                console.log(`✨ Reconnection successful for user ${userId}`);
+            }
+            existingUser.socketId = socket.id;
+            existingUser.status = 'active';
+            if (initialName && initialName !== 'Stranger') {
+                existingUser.name = initialName;
+            }
+        } else {
+            activeUsers[userId] = {
+                socketId: socket.id,
+                name: initialName,
+                status: 'active',
+                disconnectTimer: null
+            };
+        }
+
+        // Handle auto-rejoining room
+        const activeRoomId = userRooms[userId];
+        if (activeRoomId) {
+            console.log(`🔄 Auto-rejoining user ${userId} to active room ${activeRoomId}`);
+            socket.join(activeRoomId);
+            
+            // Notify the partner that user is back online
+            socket.to(activeRoomId).emit('partner_status_change', { status: 'active' });
+            
+            // Let the client know the rejoin was successful
+            socket.emit('rejoined_room', { roomId: activeRoomId });
+        } else if (clientRoomId) {
+            // Client reported a roomId but server doesn't have it (expired/closed)
+            console.log(`💀 Client reported roomId ${clientRoomId} but server has no record. Declaring connection dead.`);
+            socket.emit('connection_dead');
+        }
+    } else {
+        console.log(`User Connected (anonymous): ${socket.id}`);
+    }
 
     // --- ADD CONNECTION HEALTH CHECK ---
     socket.on('ping', () => {
         socket.emit('pong');
     });
 
-    // --- MATCHMAKING (FIXED) ---
-// --- MATCHMAKING (WITH DELAY FIX) ---
+    // --- MATCHMAKING (WITH PERSISTENT USER ID FIX) ---
     socket.on('find_match', async () => {
-        // 1. Remove self from queue
-        await redis.lrem('waiting_queue', 0, socket.id);
+        const myUserId = socketUserMap[socket.id];
+        if (!myUserId) return;
 
-        let partnerId = await redis.rpop('waiting_queue');
+        // 1. Remove self from queue
+        await redis.lrem('waiting_queue', 0, myUserId);
+
+        let partnerUserId = await redis.rpop('waiting_queue');
         
         let attempts = 0;
         const MAX_ATTEMPTS = 10; 
 
-        while (partnerId) {
-            if (partnerId === socket.id) {
-                partnerId = await redis.rpop('waiting_queue');
+        while (partnerUserId) {
+            if (partnerUserId === myUserId) {
+                partnerUserId = await redis.rpop('waiting_queue');
                 continue;
             }
 
-            const partnerSocket = io.sockets.sockets.get(partnerId);
-            const isPartnerBusy = partnerSocket && userRooms[partnerId]; 
+            const partnerInfo = activeUsers[partnerUserId];
+            const partnerSocket = partnerInfo ? io.sockets.sockets.get(partnerInfo.socketId) : null;
+            const isPartnerBusy = partnerUserId && userRooms[partnerUserId]; 
             
-            if (partnerSocket && !isPartnerBusy) {
+            if (partnerSocket && !isPartnerBusy && partnerInfo.status === 'active') {
                 const [iBlockedThem, theyBlockedMe] = await Promise.all([
-                    redis.get(`block:${socket.id}:${partnerId}`),
-                    redis.get(`block:${partnerId}:${socket.id}`)
+                    redis.get(`block:${myUserId}:${partnerUserId}`),
+                    redis.get(`block:${partnerUserId}:${myUserId}`)
                 ]);
 
                 if (!iBlockedThem && !theyBlockedMe) {
-                    console.log(`✅ MATCH FOUND! Pairing ${socket.id} with ${partnerId}`);
+                    console.log(`✅ MATCH FOUND! Pairing ${myUserId} with ${partnerUserId}`);
                     
-                    const roomId = `${partnerId}-${socket.id}`;
+                    const roomId = `${partnerUserId}-${myUserId}`;
                     
                     await partnerSocket.join(roomId);
                     await socket.join(roomId);
                     
-                    userRooms[partnerId] = roomId;
-                    userRooms[socket.id] = roomId;
+                    userRooms[partnerUserId] = roomId;
+                    userRooms[myUserId] = roomId;
                     
                     // --- THE FIX: WAIT 100ms ---
-                    // Give sockets time to update their subscriptions before emitting
                     await new Promise(resolve => setTimeout(resolve, 100));
 
-                    io.to(roomId).emit('match_found', { roomId, partnerId });
+                    io.to(roomId).emit('match_found', { roomId, partnerId: partnerUserId });
                     return; 
                 }
             }
 
-            if (partnerSocket) {
-                await redis.lpush('waiting_queue', partnerId);
+            if (partnerSocket && partnerInfo && partnerInfo.status === 'active') {
+                await redis.lpush('waiting_queue', partnerUserId);
             }
             
             attempts++;
             if (attempts >= MAX_ATTEMPTS) break;
             
-            partnerId = await redis.rpop('waiting_queue');
+            partnerUserId = await redis.rpop('waiting_queue');
         }
 
-        await redis.lpush('waiting_queue', socket.id);
+        await redis.lpush('waiting_queue', myUserId);
     });
 
     socket.on('send_name', (data) => {
@@ -135,31 +187,98 @@ io.on('connection', (socket) => {
     });
 
     socket.on('block_user', async (data) => {
-        const { roomId, partnerId } = data;
-        await redis.set(`block:${socket.id}:${partnerId}`, 1, 'EX', 600);
+        const { roomId, partnerId } = data; // partnerId is partner's userId
+        const myUserId = socketUserMap[socket.id];
+        if (!myUserId) return;
+
+        await redis.set(`block:${myUserId}:${partnerId}`, 1, 'EX', 600);
         socket.to(roomId).emit('partner_disconnected');
         socket.leave(roomId);
-        delete userRooms[socket.id];
+        
+        delete userRooms[myUserId];
+        delete userRooms[partnerId];
+        delete reactionState[roomId];
+
+        const partner = activeUsers[partnerId];
+        if (partner && partner.disconnectTimer) {
+            clearTimeout(partner.disconnectTimer);
+            delete activeUsers[partnerId];
+        }
+    });
+
+    socket.on('user_status_change', (data) => {
+        const myUserId = socketUserMap[socket.id];
+        if (!myUserId) return;
+
+        const user = activeUsers[myUserId];
+        if (user) {
+            user.status = data.status; // 'active' or 'inactive'
+            const roomId = userRooms[myUserId];
+            if (roomId) {
+                socket.to(roomId).emit('partner_status_change', { status: data.status });
+            }
+        }
     });
 
     socket.on('disconnect', async () => {
-        await redis.lrem('waiting_queue', 0, socket.id);
-        const roomId = userRooms[socket.id];
-        if (roomId) {
-            socket.to(roomId).emit('partner_disconnected');
-            delete userRooms[socket.id];
-            delete rpsMoves[roomId]; 
-            delete reactionState[roomId];
+        const myUserId = socketUserMap[socket.id];
+        if (!myUserId) {
+            console.log(`User Disconnected (anonymous): ${socket.id}`);
+            return;
         }
-        console.log(`User Disconnected: ${socket.id}`);
+
+        console.log(`User Disconnected: ${socket.id} (User: ${myUserId})`);
+        delete socketUserMap[socket.id];
+
+        const user = activeUsers[myUserId];
+        if (user) {
+            user.status = 'disconnected';
+            
+            const roomId = userRooms[myUserId];
+            if (roomId) {
+                console.log(`⏳ User ${myUserId} disconnected from room ${roomId}. Starting 12s reconnection window...`);
+                socket.to(roomId).emit('partner_status_change', { status: 'disconnected' });
+
+                if (user.disconnectTimer) clearTimeout(user.disconnectTimer);
+                
+                user.disconnectTimer = setTimeout(async () => {
+                    console.log(`💀 Reconnection window expired for user ${myUserId}. Cleaning up room.`);
+                    
+                    // Notify partner that they are gone permanently
+                    socket.to(roomId).emit('partner_disconnected');
+                    
+                    // Clean up room association for both users
+                    const partnerUserId = roomId.split('-').find(id => id !== myUserId);
+                    
+                    delete userRooms[myUserId];
+                    if (partnerUserId) {
+                        delete userRooms[partnerUserId];
+                    }
+                    delete activeUsers[myUserId];
+                    delete reactionState[roomId];
+                    
+                    await redis.lrem('waiting_queue', 0, myUserId);
+                    if (partnerUserId) {
+                        await redis.lrem('waiting_queue', 0, partnerUserId);
+                    }
+                }, 12000); // 12 seconds grace period
+            } else {
+                // Not in a room, clean up immediately
+                await redis.lrem('waiting_queue', 0, myUserId);
+                delete activeUsers[myUserId];
+            }
+        }
     });
 
     // ADD ERROR HANDLER
     socket.on('error', (error) => {
         console.error(`Socket error for ${socket.id}:`, error);
-        const roomId = userRooms[socket.id];
-        if (roomId) {
-            socket.to(roomId).emit('partner_disconnected');
+        const myUserId = socketUserMap[socket.id];
+        if (myUserId) {
+            const roomId = userRooms[myUserId];
+            if (roomId) {
+                socket.to(roomId).emit('partner_status_change', { status: 'disconnected' });
+            }
         }
     });
 
@@ -168,7 +287,6 @@ io.on('connection', (socket) => {
     
     socket.on('accept_game', (data) => {
         const { roomId, gameType } = data;
-        delete rpsMoves[roomId];
         
         io.to(roomId).emit('game_start', { gameType, starterId: socket.id });
 
@@ -192,29 +310,26 @@ io.on('connection', (socket) => {
         const { roomId } = data;
         socket.to(roomId).emit('partner_disconnected');
         socket.leave(roomId);
-        delete userRooms[socket.id];
-        delete rpsMoves[roomId];
-        delete reactionState[roomId];
+        
+        const myUserId = socketUserMap[socket.id];
+        if (myUserId) {
+            delete userRooms[myUserId];
+            delete reactionState[roomId];
+        }
+        
+        const partnerUserId = roomId.split('-').find(id => id !== myUserId);
+        if (partnerUserId) {
+            delete userRooms[partnerUserId];
+            const partner = activeUsers[partnerUserId];
+            if (partner && partner.disconnectTimer) {
+                clearTimeout(partner.disconnectTimer);
+                delete activeUsers[partnerUserId];
+            }
+        }
     });
 
     socket.on('make_move', (data) => {
         const { roomId, index, symbol, gameType, extraData } = data;
-
-        if (gameType === 'rps') {
-            if (!rpsMoves[roomId]) rpsMoves[roomId] = {};
-            rpsMoves[roomId][socket.id] = symbol;
-
-            const players = Object.keys(rpsMoves[roomId]);
-            if (players.length === 2) {
-                const p1 = players[0];
-                const p2 = players[1];
-                io.to(roomId).emit('rps_reveal', { moves: { [p1]: rpsMoves[roomId][p1], [p2]: rpsMoves[roomId][p2] } });
-                delete rpsMoves[roomId]; 
-            } else {
-                socket.to(roomId).emit('rps_waiting');
-            }
-            return;
-        }
 
         if (gameType === 'reaction') {
             const state = reactionState[roomId];

@@ -3,14 +3,13 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Play, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Users, Zap, Grid3X3, Reply, Repeat } from 'lucide-react';
+import { MessageCircle, Shield, Gamepad2, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Users, Zap, Grid3X3, Reply, Repeat } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/react"
 
 // Import Your Custom Logo
-import logoImage from './assets/logo.png'; 
 
 // Import Game Logic
-import { GameBoard, RPSBoard, ReactionBoard, checkTicTacToeWinner, checkConnect4Winner, checkDotsBoxesWinner } from './components/GameComponents';
+import { GameBoard, ChessBoardGame, ReactionBoard, checkTicTacToeWinner, checkConnect4Winner, checkDotsBoxesWinner } from './components/GameComponents';
 
 // --- CONFIGURATION ---
 
@@ -24,13 +23,13 @@ const playConnectSound = () => {
 
 // --- VISUAL COMPONENTS ---
 const GlassCard = ({ children, className = "" }) => (
-    <div className={`bg-zinc-900/80 backdrop-blur-md border border-white/10 shadow-2xl rounded-2xl ${className}`}>
+    <div className={`bg-black/20 border border-white/10 shadow-2xl rounded-2xl ${className}`}>
         {children}
     </div>
 );
 
 const CatLogo = ({ className = "w-12 h-12" }) => (
-  <img src={logoImage} alt="Guftaguu Logo" className={`object-contain ${className}`} />
+  <img src="/website%20icon.png" alt="Guftaguu Logo" className={`object-contain ${className}`} />
 );
 
 const GlowButton = ({ onClick, children, disabled, variant = "primary", className="" }) => {
@@ -171,10 +170,21 @@ const ConnectionStatusBanner = ({ isConnected, isReconnecting }) => {
     );
 };
 
+// --- USER ID SESSION GENERATOR ---
+const getOrCreateUserId = () => {
+    let id = localStorage.getItem("guftaguu_user_id");
+    if (!id) {
+        id = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        localStorage.setItem("guftaguu_user_id", id);
+    }
+    return id;
+};
+
 // --- CHAT INTERFACE ---
 function ChatInterface({ displayName, onLogout }) {
   const socketRef = useRef();
   const messagesEndRef = useRef(null);
+  const isSenderRef = useRef(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   // State
   const [idleCount, setIdleCount] = useState(1); 
@@ -184,6 +194,7 @@ function ChatInterface({ displayName, onLogout }) {
   const [partnerId, setPartnerId] = useState(null);
   const [partnerName, setPartnerName] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [partnerStatus, setPartnerStatus] = useState('active'); // active, inactive, disconnected
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
@@ -203,10 +214,8 @@ function ChatInterface({ displayName, onLogout }) {
   const [mySymbol, setMySymbol] = useState(null); 
   const [gameWinner, setGameWinner] = useState(null);
 
-  // RPS Specific
-  const [rpsMyMove, setRpsMyMove] = useState(null);
-  const [rpsOpponentMoved, setRpsOpponentMoved] = useState(false);
-  const [rpsResult, setRpsResult] = useState(null);
+  // Chess specific (game over sync)
+  const [chessGameOver, setChessGameOver] = useState(null);
 
   // Reaction Game Specific (SIMPLIFIED - NO ROUNDS/SCORES)
   const [reactionState, setReactionState] = useState('waiting'); // waiting, ready, result
@@ -218,6 +227,7 @@ function ChatInterface({ displayName, onLogout }) {
   
   // Modals
   const [showGameSelector, setShowGameSelector] = useState(false);
+  const [chessSubmenu, setChessSubmenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   
   
@@ -226,11 +236,22 @@ function ChatInterface({ displayName, onLogout }) {
 
   const getSocket = () => socketRef.current;
 
+  // Sync auth roomId when it changes
+  useEffect(() => {
+      if (socketRef.current && socketRef.current.auth) {
+          socketRef.current.auth.roomId = roomId;
+      }
+  }, [roomId]);
+
   useEffect(() => {
     // --- FIXED CONNECTION LOGIC ---
-    // Removed "forceNew: true" to prevent ghost connections
     if (!socketRef.current) {
         socketRef.current = io("https://guftaguu-backend.onrender.com", {
+            auth: {
+                userId: getOrCreateUserId(),
+                name: displayName,
+                roomId: roomId
+            },
             reconnection: true,
             reconnectionAttempts: 15,
             reconnectionDelay: 1000,
@@ -251,9 +272,10 @@ function ChatInterface({ displayName, onLogout }) {
     socket.on('connect', () => {
         console.log('✅ Connected to server');
         setIsConnected(true);
-        // If we were in a chat and reconnected, try to rejoin
-        if (roomId && status === 'chatting') {
-            console.log('🔄 Attempting to rejoin room after reconnection...');
+        // If we were searching and reconnected, re-emit find_match to put us back in queue!
+        if (status === 'searching') {
+            console.log('🔄 Re-emitting find_match after reconnection...');
+            socket.emit('find_match');
         }
     });
 
@@ -263,10 +285,6 @@ function ChatInterface({ displayName, onLogout }) {
     socket.on('disconnect', (reason) => {
         console.log('❌ Disconnected:', reason);
         setIsConnected(false);
-        // Only show "partner left" if we were actually chatting
-        if (status === 'chatting' && reason !== "io client disconnect") {
-            // Wait a moment before declaring them gone (they might reconnect)
-        }
     });
 
     socket.on('connect_error', (error) => {
@@ -291,7 +309,7 @@ function ChatInterface({ displayName, onLogout }) {
     socket.on('connection_dead', () => {
         console.log('💀 Server detected dead connection');
         setStatus("partner_left");
-        alert("Connection error detected. Starting new chat...");
+        alert("Connection expired or dead. Starting new chat...");
     });
 
     // ===== HEARTBEAT / PING-PONG =====
@@ -302,9 +320,6 @@ function ChatInterface({ displayName, onLogout }) {
             // Set timeout to check if we got pong back
             const pongTimeout = setTimeout(() => {
                 console.warn('⚠️ No pong received - connection may be dead');
-                // You could force a reconnection here
-                // socket.disconnect();
-                // socket.connect();
             }, 10000); 
             
             socket.once('pong', () => {
@@ -319,11 +334,23 @@ function ChatInterface({ displayName, onLogout }) {
         setStatus("chatting"); 
         setRoomId(roomId); 
         setPartnerId(partnerId); 
+        setPartnerStatus('active');
         setMessages([]); 
         resetGame(); 
         setPartnerName(null); 
         playConnectSound();
         socket.emit('send_name', { roomId, name: displayName });
+    });
+
+    socket.on('rejoined_room', ({ roomId }) => {
+        console.log(`✨ Rejoined active room: ${roomId}`);
+        setStatus("chatting");
+        setPartnerStatus('active');
+    });
+
+    socket.on('partner_status_change', ({ status }) => {
+        console.log(`👤 Partner status changed to: ${status}`);
+        setPartnerStatus(status);
     });
 
     socket.on('site_stats', (data) => {
@@ -349,7 +376,17 @@ function ChatInterface({ displayName, onLogout }) {
         setStatus("partner_left"); 
         resetGame(); 
     });
-    
+
+    // ===== TAB VISIBILITY HANDLERS =====
+    const handleVisibilityChange = () => {
+        if (!socket.connected || !roomId) return;
+        const currentStatus = document.visibilityState === 'visible' ? 'active' : 'inactive';
+        console.log(`📱 Visibility changed to ${currentStatus}. Emitting user_status_change...`);
+        socket.emit('user_status_change', { status: currentStatus });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     socket.on('display_typing', (isTyping) => setIsPartnerTyping(isTyping));
     socket.on('game_requested', (gameType) => setIncomingRequest(gameType));
     
@@ -360,7 +397,12 @@ function ChatInterface({ displayName, onLogout }) {
         if (gameType === 'tictactoe') setBoard(Array(9).fill(null));
         else if (gameType === 'connect4') setBoard(Array(42).fill(null)); 
         else if (gameType === 'dotsboxes') setBoard({ hLines: Array(30).fill(false), vLines: Array(30).fill(false), boxes: Array(25).fill(null) });
-        else if (gameType === 'rps') { setRpsMyMove(null); setRpsOpponentMoved(false); setRpsResult(null); }
+        else if (gameType.startsWith('chess')) { 
+            const tc = gameType.split('-')[1]; // '3', '10', or 'unlimited'
+            const initialTime = tc === '3' ? 180 : tc === '10' ? 600 : null;
+            setBoard({ fen: 'start', whiteTime: initialTime, blackTime: initialTime, timeControl: tc });
+            setChessGameOver(null); 
+        }
         else if (gameType === 'reaction') { 
             setReactionState('waiting'); 
             setReactionResult(null); 
@@ -371,7 +413,12 @@ function ChatInterface({ displayName, onLogout }) {
         setStatusMessage(""); 
         setGameWinner(null);
         
-        const amIAccepter = socket.id === starterId; 
+        // starterId = the socket.id of the ACCEPTER (sent by backend in accept_game)
+        // If MY socket.id === starterId, I am the accepter => Black (O)
+        // If MY socket.id !== starterId, I am the requester => White (X)
+        const mySocketId = socket.id;
+        const amIAccepter = mySocketId === starterId;
+        console.log('🎮 game_start:', { mySocketId, starterId, amIAccepter, gameType });
         if (amIAccepter) { 
             setMySymbol('O'); 
             setIsMyTurn(false); 
@@ -388,7 +435,10 @@ function ChatInterface({ displayName, onLogout }) {
     });
 
     socket.on('receive_move', ({ index, symbol, extraData }) => {
-        if (extraData && extraData.game === 'dotsboxes') {
+        if (extraData && extraData.game === 'chess') {
+            setBoard(extraData.gameState);
+            setIsMyTurn(true);
+        } else if (extraData && extraData.game === 'dotsboxes') {
             const { type, index: i } = extraData;
             setBoard(prev => {
                 const next = { ...prev };
@@ -437,27 +487,7 @@ function ChatInterface({ displayName, onLogout }) {
         }
     });
 
-    socket.on('rps_waiting', () => setRpsOpponentMoved(true));
-    
-    socket.on('rps_reveal', ({ moves }) => {
-        const mySocketId = socket.id;
-        const keys = Object.keys(moves);
-        const theirSocketId = keys.find(id => id !== mySocketId);
-        const myMoveVal = moves[mySocketId];
-        const theirMoveVal = moves[theirSocketId];
-        
-        let result = 'draw';
-        if (myMoveVal !== theirMoveVal) {
-            if ((myMoveVal === 'R' && theirMoveVal === 'S') || 
-                (myMoveVal === 'P' && theirMoveVal === 'R') || 
-                (myMoveVal === 'S' && theirMoveVal === 'P')) { 
-                result = 'me'; 
-            } else { 
-                result = 'opponent'; 
-            }
-        }
-        setRpsResult({ winner: result, myMove: myMoveVal, theirMove: theirMoveVal });
-    });
+
 
     socket.on('reaction_green_light', () => { 
         setReactionState('ready'); 
@@ -524,9 +554,11 @@ function ChatInterface({ displayName, onLogout }) {
 
   const resetAll = () => { setStatus("idle"); setMessages([]); resetGame(); setPartnerId(null); setPartnerName(null); };
   const resetGame = () => { 
+      isSenderRef.current = false;
       setGameActive(false); setIncomingRequest(null); setShowGameSelector(false);
+      setChessSubmenu(false);
       setWaitingForResponse(false); setBoard([]); setStatusMessage(""); setGameWinner(null);
-      setRpsMyMove(null); setRpsOpponentMoved(false); setRpsResult(null); 
+      setChessGameOver(null);
       setReactionResult(null); setReactionState('waiting'); setActiveGameType(null);
   };
 
@@ -577,8 +609,13 @@ function ChatInterface({ displayName, onLogout }) {
   const handleMainButton = () => { if (status === 'chatting') handleDisconnectChat(); else handleNewMatch(); };
   const handleBlock = () => { if (!roomId || !partnerId) return; if (window.confirm("Block user for 10 mins?")) { getSocket().emit('block_user', { roomId, partnerId }); resetAll(); alert("User blocked."); } };
   const submitReport = async (e) => { e.preventDefault(); setIsSendingReport(true); try { await axios.post('https://guftaguu-backend.onrender.com/api/report', reportData); alert("Sent!"); setShowReportModal(false); } catch (err) { alert("Failed."); } setIsSendingReport(false); };
-  const sendGameRequest = (gameType) => { setWaitingForResponse(true); setShowGameSelector(false); getSocket().emit("request_game", { roomId, gameType }); };
-  const acceptGame = () => { getSocket().emit("accept_game", { roomId, gameType: incomingRequest }); };
+  const sendGameRequest = (gameType) => { 
+      isSenderRef.current = true;
+      setWaitingForResponse(true); 
+      setShowGameSelector(false); 
+      getSocket().emit("request_game", { roomId, gameType }); 
+  };
+  const acceptGame = () => { isSenderRef.current = false; getSocket().emit("accept_game", { roomId, gameType: incomingRequest }); };
   const declineGame = () => { setIncomingRequest(null); getSocket().emit("decline_game", { roomId }); };
   
   // --- REPLAY HANDLER ---
@@ -589,7 +626,11 @@ function ChatInterface({ displayName, onLogout }) {
   };
 
   const handleGameMove = (indexOrData) => {
-      if (activeGameType === 'dotsboxes') {
+      if (activeGameType && activeGameType.startsWith('chess')) {
+          setBoard(indexOrData);
+          setIsMyTurn(false);
+          getSocket().emit("make_move", { roomId, index: 0, symbol: mySymbol, gameType: activeGameType, extraData: { game: 'chess', gameState: indexOrData } });
+      } else if (activeGameType === 'dotsboxes') {
           const { type, index } = indexOrData;
           let boxCompleted = false;
           setBoard(prev => {
@@ -617,21 +658,16 @@ function ChatInterface({ displayName, onLogout }) {
       }
   };
 
-  const handleRPSMove = (moveId) => { setRpsMyMove(moveId); getSocket().emit("make_move", { roomId, symbol: moveId, gameType: 'rps' }); };
+
   const handleReactionClick = () => { setReactionState('clicked'); getSocket().emit("make_move", { roomId, symbol: 'click', gameType: 'reaction' }); };
   const isChatEnded = status === "partner_left" || status === "disconnected";
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
+    <div className="min-h-screen text-white font-sans flex flex-col relative overflow-hidden">
         <ConnectionStatusBanner isConnected={isConnected} isReconnecting={isReconnecting} />
-       
-       {/* Background */}
-       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
-       <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-       <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
 
        {/* HEADER */}
-       <header className="px-6 py-4 border-b border-white/5 bg-black/50 backdrop-blur-sm flex justify-between items-center z-50">
+       <header className="px-6 py-4 border-b border-white/5 bg-black/20 flex justify-between items-center z-50">
         <div className="flex items-center gap-4">
             <CatLogo className="w-10 h-10" />
             <div>
@@ -681,10 +717,18 @@ function ChatInterface({ displayName, onLogout }) {
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] animate-in zoom-in-95 duration-200">
                 <GlassCard className="p-8 text-center max-w-sm">
                     <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-400">
-                        <Play size={32} />
+                        <Gamepad2 size={32} />
                     </div>
                     <h3 className="text-2xl font-bold mb-2">Game Request</h3>
-                    <p className="text-zinc-400 mb-8">Stranger wants to play <span className="text-white font-bold">{incomingRequest}</span></p>
+                    <p className="text-zinc-400 mb-8">Stranger wants to play <span className="text-white font-bold">{
+                        incomingRequest.startsWith('chess-') 
+                            ? `Chess (${incomingRequest.split('-')[1] === '3' ? '3 Min Blitz' : incomingRequest.split('-')[1] === '10' ? '10 Min Rapid' : 'Unlimited'})` 
+                            : incomingRequest === 'tictactoe' ? 'Tic-Tac-Toe' 
+                            : incomingRequest === 'connect4' ? 'Connect 4' 
+                            : incomingRequest === 'dotsboxes' ? 'Dots & Boxes' 
+                            : incomingRequest === 'reaction' ? 'Reaction Time' 
+                            : incomingRequest
+                    }</span></p>
                     <div className="flex gap-3 justify-center">
                         <GlowButton variant="primary" onClick={acceptGame}>Accept</GlowButton>
                         <GlowButton variant="danger" onClick={declineGame}>Decline</GlowButton>
@@ -695,15 +739,29 @@ function ChatInterface({ displayName, onLogout }) {
 
         {showGameSelector && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]" onClick={() => setShowGameSelector(false)}>
-                <GlassCard className="p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-                    <h3 className="text-xl font-bold mb-6 text-center">Select a Game</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <button onClick={() => sendGameRequest('tictactoe')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">❌⭕</span><span className="font-bold text-sm">Tic-Tac-Toe</span></button>
-                        <button onClick={() => sendGameRequest('connect4')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">🔴🟡</span><span className="font-bold text-sm">Connect 4</span></button>
-                        <button onClick={() => sendGameRequest('dotsboxes')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><Grid3X3 size={32} className="text-blue-400"/><span className="font-bold text-sm">Dots & Boxes</span></button>
-                        <button onClick={() => sendGameRequest('reaction')} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><Zap size={32} className="text-yellow-400"/><span className="font-bold text-sm">Reaction Time</span></button>
-                        <button onClick={() => sendGameRequest('rps')} className="col-span-2 bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">✂️🪨📄</span><span className="font-bold text-sm">Rock Paper Scissors</span></button>
-                    </div>
+                <GlassCard className="p-6 max-w-md w-full animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                    {!chessSubmenu ? (
+                        <>
+                            <h3 className="text-xl font-bold mb-6 text-center">Select a Game</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); sendGameRequest('tictactoe'); }} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">❌⭕</span><span className="font-bold text-sm">Tic-Tac-Toe</span></button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); sendGameRequest('connect4'); }} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">🔴🟡</span><span className="font-bold text-sm">Connect 4</span></button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); sendGameRequest('dotsboxes'); }} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><Grid3X3 size={32} className="text-blue-400"/><span className="font-bold text-sm">Dots & Boxes</span></button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); sendGameRequest('reaction'); }} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><Zap size={32} className="text-yellow-400"/><span className="font-bold text-sm">Reaction Time</span></button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setChessSubmenu(true); }} className="col-span-2 bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">♟️</span><span className="font-bold text-sm">Chess</span></button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <h3 className="text-xl font-bold mb-6 text-center">Select Chess Time Control</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); sendGameRequest('chess-3'); }} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">⚡</span><span className="font-bold text-sm text-center">3 Min Blitz</span></button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); sendGameRequest('chess-10'); }} className="bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">⏱️</span><span className="font-bold text-sm text-center">10 Min Rapid</span></button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); sendGameRequest('chess-unlimited'); }} className="col-span-2 bg-zinc-800 hover:bg-zinc-700 p-6 rounded-xl border border-white/5 transition flex flex-col items-center gap-2"><span className="text-3xl">♾️</span><span className="font-bold text-sm">Unlimited</span></button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setChessSubmenu(false); }} className="col-span-2 bg-zinc-900 border border-white/10 hover:bg-zinc-800 p-3 rounded-xl transition font-bold text-sm">← Back</button>
+                            </div>
+                        </>
+                    )}
                 </GlassCard>
             </div>
         )}
@@ -733,8 +791,8 @@ function ChatInterface({ displayName, onLogout }) {
                 {gameActive && (
                     <div className="flex flex-col flex-none h-[45%] md:h-auto md:flex-1 min-h-0 relative">
                         {/* GAME BOARD */}
-                        {activeGameType === 'rps' ? (
-                            <RPSBoard onMove={handleRPSMove} myMove={rpsMyMove} opponentMoved={rpsOpponentMoved} result={rpsResult} />
+                        {activeGameType && activeGameType.startsWith('chess') ? (
+                            <ChessBoardGame gameState={board} onMove={handleGameMove} mySymbol={mySymbol} isMyTurn={isMyTurn} statusMessage={statusMessage} onGameEnd={winner => { if(!chessGameOver) setChessGameOver(winner); }} />
                         ) : activeGameType === 'reaction' ? (
                             <ReactionBoard onClick={handleReactionClick} gameState={reactionState} result={reactionResult} />
                         ) : (
@@ -742,12 +800,16 @@ function ChatInterface({ displayName, onLogout }) {
                         )}
 
                         {/* PLAY AGAIN / RESULT OVERLAY - Show for non-reaction games or when reaction hasn't shown result yet */}
-                        {((gameWinner || rpsResult) || (reactionResult && activeGameType !== 'reaction')) && (
+                        {((gameWinner || chessGameOver) || (reactionResult && activeGameType !== 'reaction')) && (
                             <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20 backdrop-blur-sm rounded-xl">
-                                <h3 className="text-3xl font-bold mb-6 text-white tracking-tight">
-                                    {activeGameType === 'rps' && rpsResult.winner === 'draw' ? "It's a Draw!" :
-                                     activeGameType === 'rps' ? (rpsResult.winner === 'me' ? "You Won!" : "You Lost!") :
-                                     gameWinner === 'draw' ? "It's a Draw!" :
+                                <h3 className="text-3xl font-bold mb-6 text-white tracking-tight text-center px-4">
+                                    {activeGameType && activeGameType.startsWith('chess') ? (
+                                        chessGameOver === 'draw' ? "It's a Draw!" :
+                                        chessGameOver === 'me' ? "You Won! 🎉" :
+                                        chessGameOver === 'opponent_timeout' ? "Opponent Timeout! You Win! ⏳" :
+                                        chessGameOver === 'my_timeout' ? "Time's Up! You Lost ⏳" :
+                                        "You Lost! 💀"
+                                    ) : gameWinner === 'draw' ? "It's a Draw!" :
                                      (gameWinner === mySymbol) ? "You Won!" : "You Lost!"}
                                 </h3>
                                 <div className="flex gap-4">
@@ -776,19 +838,33 @@ function ChatInterface({ displayName, onLogout }) {
                 )}
                 
                 <GlassCard className="flex-1 flex flex-col overflow-hidden min-h-0">
-                    {/* CHAT HEADER */}
+                     {/* CHAT HEADER */}
                     <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center bg-black/20 shrink-0">
                          <div className="flex items-center gap-2 md:gap-3">
-                             <div className={`w-2 h-2 rounded-full ${isChatEnded ? "bg-red-500" : "bg-green-500 shadow-[0_0_10px_#22c55e]"}`}></div>
-                             <span className="font-bold text-xs md:text-sm tracking-wide truncate max-w-[100px] md:max-w-none">
-                                {isChatEnded ? "Disconnected" : (partnerName || "Stranger")}
+                             <div className={`w-2 h-2 rounded-full ${
+                                 isChatEnded 
+                                     ? "bg-red-500" 
+                                     : partnerStatus === 'inactive' 
+                                     ? "bg-amber-500 shadow-[0_0_10px_#f59e0b]" 
+                                     : partnerStatus === 'disconnected' 
+                                     ? "bg-red-500 animate-pulse shadow-[0_0_10px_#ef4444]" 
+                                     : "bg-green-500 shadow-[0_0_10px_#22c55e]"
+                             }`}></div>
+                             <span className="font-bold text-xs md:text-sm tracking-wide truncate max-w-[150px] md:max-w-none">
+                                {isChatEnded 
+                                    ? "Disconnected" 
+                                    : partnerStatus === 'inactive' 
+                                    ? `${partnerName || "Stranger"} (Away)` 
+                                    : partnerStatus === 'disconnected' 
+                                    ? `${partnerName || "Stranger"} (Reconnecting...)` 
+                                    : (partnerName || "Stranger")}
                              </span>
                          </div>
                          
                          <div className="flex gap-2">
                             {!isChatEnded && !gameActive && (
-                                <button onClick={() => setShowGameSelector(true)} disabled={waitingForResponse} className="p-2 hover:bg-white/10 rounded-full transition text-blue-400" title="Play Game">
-                                    <Play size={18} />
+                                <button onClick={() => { setChessSubmenu(false); setShowGameSelector(true); }} disabled={waitingForResponse} className="p-2 hover:bg-white/10 rounded-full transition text-blue-400" title="Play Game">
+                                    <Gamepad2 size={18} />
                                 </button>
                             )}
                             {!isChatEnded && (
@@ -828,7 +904,7 @@ function ChatInterface({ displayName, onLogout }) {
                             <form onSubmit={sendMessage} className="p-3 md:p-4 border-t border-white/10 flex gap-2 md:gap-3">
                                 <input type="text" value={message} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-base md:text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" />
                                 <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50" disabled={!message.trim()}>
-                                    <Play size={20} fill="black" />
+                                    <Gamepad2 size={20} fill="black" />
                                 </button>
                             </form>
                         </div>
@@ -851,8 +927,7 @@ function ChatInterface({ displayName, onLogout }) {
 const LegalScreen = ({ onAgree }) => {
     const [checked, setChecked] = useState(false);
     return (
-        <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
+        <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
             <CatLogo className="w-24 h-24 mb-8" />
             <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tighter bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
             <p className="text-zinc-400 mb-12 text-center max-w-lg">A safe, anonymous space to connect, chat, and play.</p>
@@ -894,8 +969,7 @@ const NameScreen = ({ onStart }) => {
     const [name, setName] = useState("");
     
     return (
-        <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black -z-10"></div>
+        <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
             <GlassCard className="w-full max-w-lg p-10 text-center relative z-10">
                 <CatLogo className="w-20 h-20 mx-auto mb-6" />
                 <h2 className="text-2xl font-bold mb-2 tracking-tight">Welcome</h2>
@@ -913,7 +987,7 @@ const NameScreen = ({ onStart }) => {
 };
 
 const StaticPage = ({ title, content }) => (
-    <div className="min-h-screen bg-black text-white p-10 font-sans">
+    <div className="min-h-screen text-white p-10 font-sans">
         <Link to="/" className="text-zinc-400 hover:text-white mb-8 inline-flex items-center gap-2">← Back to Home</Link>
         <h1 className="text-5xl font-bold mb-8 tracking-tighter text-white">{title}</h1>
         <div className="max-w-3xl text-zinc-300 space-y-4">
@@ -952,12 +1026,24 @@ function App() {
     };
     
     return (
-        <Routes>
-            <Route path="/" element={ step === 'legal' ? <LegalScreen onAgree={() => setStep('name')} /> : step === 'name' ? <NameScreen onStart={handleLogin} /> : <ChatInterface displayName={displayName} onLogout={handleLogout} /> } />
-            <Route path="/privacy" element={<StaticPage title="Privacy Policy" content={PAGE_CONTENT.privacy} />} />
-            <Route path="/terms" element={<StaticPage title="Terms of Service" content={PAGE_CONTENT.terms} />} />
-            <Route path="/about" element={<StaticPage title="About Guftaguu" content={PAGE_CONTENT.about} />} />
-        </Routes>
+        <>
+            {/* Global Endless Watermark Wall */}
+            <div 
+              className="fixed inset-0 w-full h-full pointer-events-none opacity-10 -z-50"
+              style={{
+                backgroundImage: "url('/wallbackground1.png'), url('/wallbackground2.png')",
+                backgroundSize: "500px, 500px",
+                backgroundPosition: "0 0, 250px 250px",
+                backgroundRepeat: "repeat, repeat"
+              }}
+            ></div>
+            <Routes>
+                <Route path="/" element={ step === 'legal' ? <LegalScreen onAgree={() => setStep('name')} /> : step === 'name' ? <NameScreen onStart={handleLogin} /> : <ChatInterface displayName={displayName} onLogout={handleLogout} /> } />
+                <Route path="/privacy" element={<StaticPage title="Privacy Policy" content={PAGE_CONTENT.privacy} />} />
+                <Route path="/terms" element={<StaticPage title="Terms of Service" content={PAGE_CONTENT.terms} />} />
+                <Route path="/about" element={<StaticPage title="About Guftaguu" content={PAGE_CONTENT.about} />} />
+            </Routes>
+        </>
     );
 }
 
