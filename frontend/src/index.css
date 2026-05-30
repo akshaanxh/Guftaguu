@@ -1,35 +1,86 @@
-/* 1. Import 'Outfit' (For Headings) and 'Inter' (For Body) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Grotesque:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 2. Apply Global Styles */
+/* Apply Global Styles */
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: black; /* Prevents white flashes on load */
-  color: white;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: radial-gradient(circle at 50% 50%, #0c0d10 0%, #030303 100%);
+  color: #f3f4f6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-/* 3. Apply Outfit to Headings and Buttons */
+/* Headings and Brand Font */
 h1, h2, h3, h4, h5, h6, button, .font-brand {
-  font-family: 'Outfit', sans-serif;
-  letter-spacing: -0.02em; /* Tighten letters slightly for that modern look */
+  font-family: 'Space Grotesque', sans-serif;
+  letter-spacing: -0.03em;
 }
 
-/* Custom Scrollbar for Chat */
+/* Glassmorphic Panel Styles */
+.glass-panel {
+  background: rgba(13, 14, 18, 0.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 25px 60px rgba(255, 255, 255, 0.02);
+}
+
+/* Beautiful Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Text Gradients */
+.text-gradient-primary {
+  background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-glow {
+  background: linear-gradient(135deg, #60a5fa 0%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Ambient Ambient Light Orbit Effect */
+@keyframes ambientGlow {
+  0%, 100% {
+    opacity: 0.15;
+    transform: scale(1) translate(0px, 0px);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(1.1) translate(10px, -20px);
+  }
+}
+
+.bg-ambient-orb {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  filter: blur(80px);
+  z-index: -10;
+  animation: ambientGlow 15s infinite ease-in-out;
 }

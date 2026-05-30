@@ -23,7 +23,7 @@ const playConnectSound = () => {
 
 // --- VISUAL COMPONENTS ---
 const GlassCard = ({ children, className = "" }) => (
-    <div className={`bg-black/20 border border-white/10 shadow-2xl rounded-2xl ${className}`}>
+    <div className={`glass-panel rounded-2xl transition duration-300 ${className}`}>
         {children}
     </div>
 );
@@ -224,6 +224,8 @@ function ChatInterface({ displayName, onLogout }) {
   const [incomingRequest, setIncomingRequest] = useState(null);
   const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [statusMessage, setStatusMessage] = useState(""); 
+  const [incomingDrawOffer, setIncomingDrawOffer] = useState(false);
+  const [drawStatusMessage, setDrawStatusMessage] = useState(""); 
   
   // Modals
   const [showGameSelector, setShowGameSelector] = useState(false);
@@ -375,6 +377,23 @@ function ChatInterface({ displayName, onLogout }) {
     socket.on('partner_disconnected', () => { 
         setStatus("partner_left"); 
         resetGame(); 
+    });
+
+    socket.on('draw_offered', () => {
+        console.log('🤝 Draw offered by stranger');
+        setIncomingDrawOffer(true);
+    });
+
+    socket.on('draw_declined', () => {
+        console.log('❌ Draw offer declined');
+        setDrawStatusMessage("Draw offer declined.");
+        setTimeout(() => setDrawStatusMessage(""), 3000);
+    });
+
+    socket.on('draw_accepted', () => {
+        console.log('✅ Draw accepted. Ending game in draw.');
+        setChessGameOver('draw');
+        setIncomingDrawOffer(false);
     });
 
     // ===== TAB VISIBILITY HANDLERS =====
@@ -560,6 +579,8 @@ function ChatInterface({ displayName, onLogout }) {
       setWaitingForResponse(false); setBoard([]); setStatusMessage(""); setGameWinner(null);
       setChessGameOver(null);
       setReactionResult(null); setReactionState('waiting'); setActiveGameType(null);
+      setIncomingDrawOffer(false);
+      setDrawStatusMessage("");
   };
 
   const handleStartChat = () => { setStatus("searching"); getSocket().emit("find_match"); };
@@ -792,7 +813,35 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="flex flex-col flex-none h-[45%] md:h-auto md:flex-1 min-h-0 relative">
                         {/* GAME BOARD */}
                         {activeGameType && activeGameType.startsWith('chess') ? (
-                            <ChessBoardGame gameState={board} onMove={handleGameMove} mySymbol={mySymbol} isMyTurn={isMyTurn} statusMessage={statusMessage} onGameEnd={winner => { if(!chessGameOver) setChessGameOver(winner); }} />
+                            <ChessBoardGame 
+                                gameState={board} 
+                                onMove={handleGameMove} 
+                                mySymbol={mySymbol} 
+                                isMyTurn={isMyTurn} 
+                                statusMessage={statusMessage} 
+                                onGameEnd={winner => { if(!chessGameOver) setChessGameOver(winner); }} 
+                                onOfferDraw={() => {
+                                    if (roomId) {
+                                        setDrawStatusMessage("Draw offer sent...");
+                                        setTimeout(() => setDrawStatusMessage(""), 2000);
+                                        getSocket().emit('offer_draw', { roomId });
+                                    }
+                                }}
+                                incomingDrawOffer={incomingDrawOffer}
+                                onAcceptDraw={() => {
+                                    if (roomId) {
+                                        getSocket().emit('accept_draw', { roomId });
+                                        setIncomingDrawOffer(false);
+                                    }
+                                }}
+                                onDeclineDraw={() => {
+                                    if (roomId) {
+                                        getSocket().emit('decline_draw', { roomId });
+                                        setIncomingDrawOffer(false);
+                                    }
+                                }}
+                                drawStatusMessage={drawStatusMessage}
+                            />
                         ) : activeGameType === 'reaction' ? (
                             <ReactionBoard onClick={handleReactionClick} gameState={reactionState} result={reactionResult} />
                         ) : (
@@ -884,6 +933,20 @@ function ChatInterface({ displayName, onLogout }) {
                              <SwipeableMessage key={index} msg={msg} onReply={setReplyingTo} />
                         ))}
                         {isPartnerTyping && <div className="text-xs text-zinc-500 px-2 animate-pulse">typing...</div>}
+                        {!isChatEnded && partnerStatus === 'inactive' && (
+                            <div className="flex justify-center my-2 transition duration-300">
+                                <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] uppercase tracking-wider font-semibold px-3 py-1 rounded-full animate-pulse">
+                                    ⚠️ Stranger is away (switched tabs)
+                                </span>
+                            </div>
+                         )}
+                         {!isChatEnded && partnerStatus === 'disconnected' && (
+                             <div className="flex justify-center my-2 transition duration-300">
+                                 <span className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] uppercase tracking-wider font-semibold px-3 py-1 rounded-full animate-pulse">
+                                     ⏳ Connection lost (reconnecting...)
+                                 </span>
+                             </div>
+                         )}
                         {status === "partner_left" && <div className="flex justify-center mt-6 mb-2"><span className="bg-zinc-800/50 border border-white/5 text-zinc-500 text-xs px-4 py-1 rounded-full">Partner disconnected</span></div>}
                         <div ref={messagesEndRef} />
                     </div>

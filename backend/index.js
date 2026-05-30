@@ -304,6 +304,10 @@ io.on('connection', (socket) => {
     
     socket.on('decline_game', (data) => socket.to(data.roomId).emit('game_declined'));
     
+    socket.on('offer_draw', (data) => socket.to(data.roomId).emit('draw_offered'));
+    socket.on('decline_draw', (data) => socket.to(data.roomId).emit('draw_declined'));
+    socket.on('accept_draw', (data) => io.to(data.roomId).emit('draw_accepted'));
+    
     socket.on('typing', (data) => socket.to(data.roomId).emit('display_typing', data.isTyping));
 
     socket.on('leave_room', (data) => {

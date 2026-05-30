@@ -191,7 +191,19 @@ export const GameBoard = ({ gameType, board, onMove, winner, mySymbol, isMyTurn,
     );
 };
 
-export const ChessBoardGame = ({ gameState, onMove, mySymbol, isMyTurn, statusMessage, onGameEnd }) => {
+export const ChessBoardGame = ({ 
+    gameState, 
+    onMove, 
+    mySymbol, 
+    isMyTurn, 
+    statusMessage, 
+    onGameEnd,
+    onOfferDraw,
+    incomingDrawOffer,
+    onAcceptDraw,
+    onDeclineDraw,
+    drawStatusMessage
+}) => {
     const [game, setGame] = useState(new Chess());
     const [optionSquares, setOptionSquares] = useState({});
     const [selectedSquare, setSelectedSquare] = useState(null);
@@ -370,7 +382,9 @@ export const ChessBoardGame = ({ gameState, onMove, mySymbol, isMyTurn, statusMe
     const boardOrientation = amIWhite ? 'white' : 'black';
     
     let displayMessage = '';
-    if (isMate) {
+    if (drawStatusMessage) {
+        displayMessage = drawStatusMessage;
+    } else if (isMate) {
         displayMessage = game.turn() === myColor ? 'You got Checkmated 😢' : 'You Won by Checkmate! 🎉';
     } else if (isDraw) {
         displayMessage = 'Draw! 🤝';
@@ -392,60 +406,91 @@ export const ChessBoardGame = ({ gameState, onMove, mySymbol, isMyTurn, statusMe
     ];
 
     return (
-        <div className="flex flex-col flex-1 bg-zinc-900 rounded-xl border border-white/10 p-2 md:p-4 items-center justify-center relative min-h-[350px]">
+        <div className="flex flex-col flex-1 bg-zinc-900 rounded-xl border border-white/10 p-2 md:p-4 items-center justify-center relative min-h-[260px] md:min-h-[350px]">
              {statusMessage && <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10 font-bold text-white rounded-xl">{statusMessage}</div>}
              
              {/* PROMOTION DIALOG */}
              {pendingPromotion && (
-                 <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-30 rounded-xl">
-                     <div className="bg-zinc-800 border border-white/10 rounded-2xl p-5 text-center">
-                         <h4 className="text-white font-bold text-lg mb-4">Promote Pawn</h4>
-                         <div className="flex gap-3">
-                             {promotionPieces.map(({ piece, label, name }) => (
-                                 <button
-                                     key={piece}
-                                     onClick={() => handlePromotionChoice(piece)}
-                                     className="w-16 h-16 bg-zinc-700 hover:bg-zinc-600 border border-white/10 rounded-xl flex items-center justify-center text-4xl transition-all hover:scale-110 active:scale-95"
-                                     title={name}
-                                 >
-                                     {label}
-                                 </button>
-                             ))}
+                  <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-30 rounded-xl">
+                      <div className="bg-zinc-800 border border-white/10 rounded-2xl p-5 text-center">
+                          <h4 className="text-white font-bold text-lg mb-4">Promote Pawn</h4>
+                          <div className="flex gap-3">
+                              {promotionPieces.map(({ piece, label, name }) => (
+                                  <button
+                                      key={piece}
+                                      onClick={() => handlePromotionChoice(piece)}
+                                      className="w-16 h-16 bg-zinc-700 hover:bg-zinc-600 border border-white/10 rounded-xl flex items-center justify-center text-4xl transition-all hover:scale-110 active:scale-95"
+                                      title={name}
+                                  >
+                                      {label}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                  </div>
+             )}
+
+             {/* DRAW OFFER DIALOG */}
+             {incomingDrawOffer && (
+                 <div className="absolute inset-0 bg-black/85 flex items-center justify-center z-35 rounded-xl backdrop-blur-sm animate-in fade-in duration-200">
+                     <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 text-center max-w-[260px] shadow-2xl">
+                         <div className="text-3xl mb-2">🤝</div>
+                         <h4 className="text-white font-bold text-base mb-1">Draw Offered</h4>
+                         <p className="text-zinc-400 text-[11px] mb-4">Stranger is offering a draw. End the game peacefully?</p>
+                         <div className="flex gap-2.5 justify-center">
+                             <button onClick={onAcceptDraw} className="flex-1 bg-white text-black text-xs font-bold py-2 rounded-lg hover:bg-gray-200 transition active:scale-95">
+                                 Accept
+                             </button>
+                             <button onClick={onDeclineDraw} className="flex-1 bg-zinc-800 text-zinc-300 text-xs font-bold py-2 rounded-lg hover:bg-zinc-700 border border-white/5 transition active:scale-95">
+                                 Decline
+                             </button>
                          </div>
                      </div>
                  </div>
              )}
 
              <div className="w-full flex justify-between items-center mb-2 px-2 max-w-[320px]">
-                 <h3 className="text-lg md:text-xl font-bold font-mono text-white">Chess</h3>
-                 <div className={`text-xs font-bold px-2 py-1 rounded ${isCheck || isMate ? 'bg-red-500/20 text-red-500' : 'bg-black/40 text-slate-400'}`}>
-                     {displayMessage}
-                 </div>
-             </div>
-             
-             <div className="w-full max-w-[320px] flex flex-col gap-2 mx-auto">
-                  {oppTime && (
-                      <div className={`self-end font-mono text-xl md:text-2xl font-bold px-4 py-2 rounded-lg transition-colors ${isOppTurn ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
-                          {oppTime}
-                      </div>
-                  )}
-                  <Chessboard 
-                     options={{
-                         position: game.fen(),
-                         onSquareClick: handleSquareClick,
-                         squareStyles: optionSquares,
-                         boardOrientation: boardOrientation,
-                         allowDragging: false,
-                         darkSquareStyle: { backgroundColor: '#779556' },
-                         lightSquareStyle: { backgroundColor: '#ebecd0' },
-                     }}
-                  />
-                  {myTime && (
-                      <div className={`self-end font-mono text-xl md:text-2xl font-bold px-4 py-2 rounded-lg transition-colors ${isMyTurnNow ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
-                          {myTime}
-                      </div>
-                  )}
-             </div>
+                  <h3 className="text-base md:text-xl font-bold font-mono text-white">Chess</h3>
+                  <div className={`text-[10px] md:text-xs font-bold px-2 py-1 rounded ${isCheck || isMate ? 'bg-red-500/20 text-red-500' : 'bg-black/40 text-slate-400'}`}>
+                      {displayMessage}
+                  </div>
+              </div>
+              
+              <div className="w-full max-w-[320px] flex flex-col gap-2 mx-auto">
+                   {oppTime && (
+                       <div className={`self-end font-mono text-base md:text-xl font-bold px-3 py-1.5 rounded-lg transition-colors ${isOppTurn ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
+                           {oppTime}
+                       </div>
+                   )}
+                   <Chessboard 
+                      options={{
+                          position: game.fen(),
+                          onSquareClick: handleSquareClick,
+                          squareStyles: optionSquares,
+                          boardOrientation: boardOrientation,
+                          allowDragging: false,
+                          darkSquareStyle: { backgroundColor: '#779556' },
+                          lightSquareStyle: { backgroundColor: '#ebecd0' },
+                      }}
+                   />
+                   {myTime && (
+                       <div className="w-full flex justify-between items-center mt-2 px-1">
+                           <div className={`font-mono text-base md:text-xl font-bold px-3 py-1.5 rounded-lg transition-colors ${isMyTurnNow ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
+                               {myTime}
+                           </div>
+                           
+                           {/* Draw Offer Button */}
+                           {onOfferDraw && !game.isGameOver() && (
+                               <button 
+                                   onClick={onOfferDraw}
+                                   className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-white/10 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 active:scale-95"
+                               >
+                                   🤝 Offer Draw
+                               </button>
+                           )}
+                       </div>
+                   )}
+              </div>
         </div>
     );
 };
