@@ -1,86 +1,140 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Grotesque:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Apply Global Styles */
-body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+/* Apply Global Styles with strict Quicksand Typography */
+body, html {
+  font-family: 'Quicksand', sans-serif !important;
   background: radial-gradient(circle at 50% 50%, #0c0d10 0%, #030303 100%);
-  color: #f3f4f6;
+  color: #f4f4f5;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-/* Headings and Brand Font */
-h1, h2, h3, h4, h5, h6, button, .font-brand {
-  font-family: 'Space Grotesque', sans-serif;
-  letter-spacing: -0.03em;
+/* Map ALL headings and custom text helper classes strictly to Quicksand */
+h1, h2, h3, h4, h5, h6, button, input, textarea, select, 
+.font-brand, .font-display, .font-creative-title, .font-creative-button {
+  font-family: 'Quicksand', sans-serif !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-/* Glassmorphic Panel Styles */
+/* --- CREATIVE LIQUID-NEON TEXT ANIMATION --- */
+@keyframes textShine {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.text-creative-hero {
+  font-family: 'Quicksand', sans-serif !important;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ffffff 0%, #e4e4e7 50%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: 0.15em;
+  margin-bottom: -0.15em;
+}
+
+.text-creative-hero:hover {
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+}
+
+/* Unique Liquid Neon Shine Wave Animation */
+.text-creative-glow {
+  font-family: 'Quicksand', sans-serif !important;
+  font-weight: 700;
+  background: linear-gradient(120deg, #818cf8 0%, #c084fc 25%, #f472b6 50%, #c084fc 75%, #818cf8 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textShine 4s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.3));
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: 0.15em;
+  margin-bottom: -0.15em;
+}
+
+.text-creative-glow:hover {
+  filter: drop-shadow(0 0 25px rgba(192, 132, 252, 0.65));
+  transform: scale(1.03);
+}
+
+.text-gradient-silver {
+  background: linear-gradient(135deg, #ffffff 0%, #e4e4e7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.font-creative-button {
+  font-family: 'Quicksand', sans-serif !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Glassmorphic Panel Styles with Smooth Hover Transitions */
 .glass-panel {
-  background: rgba(13, 14, 18, 0.45);
+  background: rgba(12, 13, 16, 0.45);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 25px 60px rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
 }
 
-/* Beautiful Custom Scrollbars */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Text Gradients */
-.text-gradient-primary {
-  background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.text-gradient-glow {
-  background: linear-gradient(135deg, #60a5fa 0%, #c084fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 /* Ambient Ambient Light Orbit Effect */
-@keyframes ambientGlow {
+@keyframes ambientOrbit {
   0%, 100% {
-    opacity: 0.15;
+    opacity: 0.12;
     transform: scale(1) translate(0px, 0px);
   }
   50% {
-    opacity: 0.25;
-    transform: scale(1.1) translate(10px, -20px);
+    opacity: 0.22;
+    transform: scale(1.15) translate(20px, -30px);
   }
 }
 
 .bg-ambient-orb {
   position: absolute;
-  width: 600px;
-  height: 600px;
+  width: 650px;
+  height: 650px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
-  filter: blur(80px);
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, transparent 70%);
+  filter: blur(90px);
   z-index: -10;
-  animation: ambientGlow 15s infinite ease-in-out;
+  animation: ambientOrbit 20s infinite ease-in-out;
 }

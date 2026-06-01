@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 // Icons
-import { MessageCircle, Shield, Gamepad2, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Users, Zap, Grid3X3, Reply, Repeat } from 'lucide-react';
+import { MessageCircle, Shield, Gamepad2, AlertTriangle, LogOut, X, RefreshCw, CheckCircle, Info, FileText, Users, Zap, Grid3X3, Reply, Repeat, Send } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/react"
 
 // Import Your Custom Logo
@@ -687,7 +687,7 @@ function ChatInterface({ displayName, onLogout }) {
   const isChatEnded = status === "partner_left" || status === "disconnected";
 
   return (
-    <div className="min-h-screen text-white font-sans flex flex-col relative overflow-hidden">
+    <div className="min-h-screen text-white font-sans flex flex-col relative z-10 overflow-hidden">
         <ConnectionStatusBanner isConnected={isConnected} isReconnecting={isReconnecting} />
 
        {/* HEADER */}
@@ -695,7 +695,7 @@ function ChatInterface({ displayName, onLogout }) {
         <div className="flex items-center gap-4">
             <CatLogo className="w-10 h-10" />
             <div>
-                <h1 className="text-xl md:text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">Guftaguu</h1>
+                <h1 className="text-xl md:text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent pb-0.5 mb-[-2px]">Guftaguu</h1>
                 <div className="flex flex-col md:flex-row md:items-center gap-2 mt-1">
                     <div className="flex items-center gap-2">
                         <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
@@ -792,9 +792,11 @@ function ChatInterface({ displayName, onLogout }) {
 
         {status === "idle" && (
             <div className="text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <h2 className="text-5xl md:text-7xl font-bold mb-6 tracking-tighter">Talk to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Strangers.</span></h2>
+                <h2 className="text-5xl md:text-8xl font-display font-bold mb-6 tracking-tighter text-creative-hero">
+                    Talk to <span className="text-creative-glow">Strangers.</span>
+                </h2>
                 <p className="text-zinc-400 mb-10 text-lg max-w-md mx-auto">Anonymous chat. Real-time games. No login required.</p>
-                <GlowButton onClick={handleStartChat} className="text-xl px-10 py-4 mx-auto">Start Chatting</GlowButton>
+                <GlowButton onClick={handleStartChat} className="text-xl px-10 py-4 mx-auto font-creative-button">Start Chatting</GlowButton>
             </div>
         )}
 
@@ -804,8 +806,8 @@ function ChatInterface({ displayName, onLogout }) {
                     <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
                     <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <h3 className="text-2xl font-bold animate-pulse">Finding a match...</h3>
-                <button onClick={() => setStatus('idle')} className="mt-8 text-zinc-500 hover:text-white underline text-sm">Cancel Search</button>
+                <h3 className="text-2xl font-creative-title font-bold animate-pulse text-zinc-300 tracking-wide uppercase">Finding a match...</h3>
+                <button onClick={() => setStatus('idle')} className="mt-8 text-zinc-500 hover:text-white underline text-sm uppercase tracking-wider font-semibold">Cancel Search</button>
             </div>
         )}
 
@@ -969,8 +971,8 @@ function ChatInterface({ displayName, onLogout }) {
 
                             <form onSubmit={sendMessage} className="p-3 md:p-4 border-t border-white/10 flex gap-2 md:gap-3">
                                 <input type="text" value={message} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-zinc-900/50 border border-white/10 rounded-xl px-4 py-3 text-base md:text-sm focus:outline-none focus:border-white/30 focus:bg-black transition text-white placeholder:text-zinc-600" />
-                                <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50" disabled={!message.trim()}>
-                                    <Gamepad2 size={20} fill="black" />
+                                <button type="submit" className="bg-white text-black p-3 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50 flex items-center justify-center" disabled={!message.trim()}>
+                                    <Send size={18} className="text-black" />
                                 </button>
                             </form>
                         </div>
@@ -993,26 +995,26 @@ function ChatInterface({ displayName, onLogout }) {
 const LegalScreen = ({ onAgree }) => {
     const [checked, setChecked] = useState(false);
     return (
-        <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative z-10 overflow-hidden">
             <CatLogo className="w-24 h-24 mb-8" />
-            <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tighter bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">Guftaguu</h1>
+            <h1 className="text-5xl md:text-7xl font-display font-bold mb-4 tracking-tighter text-creative-hero">Guftaguu</h1>
             <p className="text-zinc-400 mb-12 text-center max-w-lg">A safe, anonymous space to connect, chat, and play.</p>
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl w-full mb-12">
                 <GlassCard className="p-6 hover:border-white/20 transition duration-300">
                     <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4 text-blue-400"><Shield size={20} /></div>
-                    <h3 className="font-bold text-lg mb-2">Privacy First</h3>
+                    <h3 className="font-creative-title text-gradient-silver text-lg mb-2">Privacy First</h3>
                     <p className="text-sm text-zinc-400 leading-relaxed">No logs. No tracking. No registration. Your conversations vanish when you leave.</p>
                     <Link to="/privacy" className="text-xs text-white underline mt-4 block">Read Policy</Link>
                 </GlassCard>
                 <GlassCard className="p-6 hover:border-white/20 transition duration-300">
                     <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4 text-purple-400"><FileText size={20} /></div>
-                    <h3 className="font-bold text-lg mb-2">Community Rules</h3>
+                    <h3 className="font-creative-title text-gradient-silver text-lg mb-2">Community Rules</h3>
                     <p className="text-sm text-zinc-400 leading-relaxed">Be kind. Harassment, hate speech, and inappropriate content are strictly banned.</p>
                     <Link to="/terms" className="text-xs text-white underline mt-4 block">Terms of Service</Link>
                 </GlassCard>
                 <GlassCard className="p-6 hover:border-white/20 transition duration-300">
                     <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mb-4 text-green-400"><Info size={20} /></div>
-                    <h3 className="font-bold text-lg mb-2">About Us</h3>
+                    <h3 className="font-creative-title text-gradient-silver text-lg mb-2">About Us</h3>
                     <p className="text-sm text-zinc-400 leading-relaxed">Built for connection. Play games like Tic-Tac-Toe and Connect 4 while you chat.</p>
                     <Link to="/about" className="text-xs text-white underline mt-4 block">Learn More</Link>
                 </GlassCard>
@@ -1035,13 +1037,13 @@ const NameScreen = ({ onStart }) => {
     const [name, setName] = useState("");
     
     return (
-        <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative z-10 overflow-hidden">
             <GlassCard className="w-full max-w-lg p-10 text-center relative z-10">
                 <CatLogo className="w-20 h-20 mx-auto mb-6" />
-                <h2 className="text-2xl font-bold mb-2 tracking-tight">Welcome</h2>
+                <h2 className="text-3xl font-display font-bold mb-2 tracking-tight uppercase text-gradient-silver">Welcome</h2>
                 <p className="text-zinc-400 mb-8">Choose a display name to begin.</p>
-                <input type="text" placeholder="Enter your name..." className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-4 text-center text-white text-lg focus:outline-none focus:border-white/50 transition mb-6 placeholder:text-zinc-700" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && onStart(name)}/>
-                <GlowButton onClick={() => name.trim() && onStart(name)} className="w-full">Start Chatting</GlowButton>
+                <input type="text" placeholder="Enter your name..." className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-4 text-center text-white text-lg focus:outline-none focus:border-white/50 transition mb-6 placeholder:text-zinc-700 font-medium" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && onStart(name)}/>
+                <GlowButton onClick={() => name.trim() && onStart(name)} className="w-full font-creative-button">Start Chatting</GlowButton>
             </GlassCard>
             <footer className="mt-12 text-xs text-zinc-600 flex gap-6 items-center">
                 <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
@@ -1053,9 +1055,9 @@ const NameScreen = ({ onStart }) => {
 };
 
 const StaticPage = ({ title, content }) => (
-    <div className="min-h-screen text-white p-10 font-sans">
-        <Link to="/" className="text-zinc-400 hover:text-white mb-8 inline-flex items-center gap-2">← Back to Home</Link>
-        <h1 className="text-5xl font-bold mb-8 tracking-tighter text-white">{title}</h1>
+    <div className="min-h-screen text-white p-10 relative z-10">
+        <Link to="/" className="text-zinc-400 hover:text-white mb-8 inline-flex items-center gap-2 font-creative-title text-sm uppercase tracking-wider transition-colors duration-200">← Back to Home</Link>
+        <h1 className="text-5xl md:text-6xl font-display font-bold mb-8 tracking-tighter text-creative-hero">{title}</h1>
         <div className="max-w-3xl text-zinc-300 space-y-4">
             {content.split('\n').map((line, index) => {
                 if (!line.trim()) return <br key={index} />;
@@ -1095,7 +1097,7 @@ function App() {
         <>
             {/* Global Endless Watermark Wall */}
             <div 
-              className="fixed inset-0 w-full h-full pointer-events-none opacity-10 -z-50"
+              className="fixed inset-0 w-full h-full pointer-events-none opacity-[0.08] z-0"
               style={{
                 backgroundImage: "url('/wallbackground1.png'), url('/wallbackground2.png')",
                 backgroundSize: "500px, 500px",

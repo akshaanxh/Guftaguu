@@ -153,7 +153,7 @@ export const GameBoard = ({ gameType, board, onMove, winner, mySymbol, isMyTurn,
         <div className="flex flex-col flex-1 bg-zinc-900 rounded-xl border border-white/10 p-2 md:p-4 items-center justify-center relative min-h-[300px] md:min-h-0">
             {statusMessage && <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10 font-bold text-white rounded-xl">{statusMessage}</div>}
             
-            <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 font-mono text-white">
+            <h3 className="text-lg md:text-xl font-creative-title font-bold mb-2 md:mb-4 uppercase tracking-wider text-gradient-silver">
                 {gameType === 'tictactoe' ? 'Tic-Tac-Toe' : 'Connect 4'}
             </h3>
             
@@ -164,7 +164,7 @@ export const GameBoard = ({ gameType, board, onMove, winner, mySymbol, isMyTurn,
                     </div>
                 </div>
             ) : (
-                <div className={`mb-2 md:mb-4 text-xs md:text-sm font-bold ${isMyTurn ? "text-green-400 animate-pulse" : "text-slate-500"}`}>
+                <div className={`mb-2 md:mb-4 text-xs md:text-sm font-creative-title font-bold tracking-wide uppercase ${isMyTurn ? "text-green-400 animate-pulse" : "text-slate-500"}`}>
                     {isMyTurn ? "👇 YOUR TURN" : "⏳ OPPONENT'S TURN..."}
                 </div>
             )}
@@ -432,11 +432,11 @@ export const ChessBoardGame = ({
 
              {/* DRAW OFFER DIALOG */}
              {incomingDrawOffer && (
-                 <div className="absolute inset-0 bg-black/85 flex items-center justify-center z-35 rounded-xl backdrop-blur-sm animate-in fade-in duration-200">
+                 <div className="absolute inset-0 bg-black/35 flex items-center justify-center z-35 rounded-xl backdrop-blur-[1.5px] animate-in fade-in duration-200">
                      <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 text-center max-w-[260px] shadow-2xl">
                          <div className="text-3xl mb-2">🤝</div>
                          <h4 className="text-white font-bold text-base mb-1">Draw Offered</h4>
-                         <p className="text-zinc-400 text-[11px] mb-4">Stranger is offering a draw. End the game peacefully?</p>
+                         <p className="text-zinc-400 text-[11px] mb-4 font-medium">Stranger is offering a draw. End the game peacefully?</p>
                          <div className="flex gap-2.5 justify-center">
                              <button onClick={onAcceptDraw} className="flex-1 bg-white text-black text-xs font-bold py-2 rounded-lg hover:bg-gray-200 transition active:scale-95">
                                  Yes
@@ -449,16 +449,24 @@ export const ChessBoardGame = ({
                  </div>
              )}
 
-             <div className="w-full flex justify-between items-center mb-2 px-2 max-w-[320px]">
-                  <h3 className="text-base md:text-xl font-bold font-mono text-white">Chess</h3>
-                  <div className={`text-[10px] md:text-xs font-bold px-2 py-1 rounded ${isCheck || isMate ? 'bg-red-500/20 text-red-500' : 'bg-black/40 text-slate-400'}`}>
+             <div className="w-full flex justify-between items-center mb-2 px-2 max-w-[250px] md:max-w-[320px]">
+                  <h3 className="text-base md:text-xl font-creative-title font-bold text-white uppercase tracking-wider text-gradient-silver">Chess</h3>
+                  <div className={`text-[10px] md:text-xs font-creative-title font-bold px-2 py-1 rounded uppercase tracking-wide transition-all duration-300 ${
+                      isCheck || isMate 
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-[0_0_12px_rgba(239,68,68,0.15)] animate-pulse' 
+                          : 'bg-black/40 text-slate-400 border border-white/5'
+                  }`}>
                       {displayMessage}
                   </div>
               </div>
               
-              <div className="w-full max-w-[320px] flex flex-col gap-2 mx-auto">
+              <div className="w-full max-w-[250px] md:max-w-[320px] flex flex-col gap-2 mx-auto">
                    {oppTime && (
-                       <div className={`self-end font-mono text-base md:text-xl font-bold px-3 py-1.5 rounded-lg transition-colors ${isOppTurn ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
+                       <div className={`self-end font-creative-title text-base md:text-lg font-bold px-3 py-1.5 rounded-xl border transition-all duration-300 ${
+                           isOppTurn 
+                               ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse' 
+                               : 'bg-zinc-800/80 text-zinc-300 border-white/5'
+                       }`}>
                            {oppTime}
                        </div>
                    )}
@@ -477,18 +485,22 @@ export const ChessBoardGame = ({
                    {/* Bottom Control Bar containing Clocks and Draw Button */}
                    <div className="w-full flex justify-between items-center mt-2 px-1">
                        {myTime ? (
-                           <div className={`font-mono text-base md:text-xl font-bold px-3 py-1.5 rounded-lg transition-colors ${isMyTurnNow ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-500'}`}>
+                           <div className={`font-creative-title text-base md:text-lg font-bold px-3 py-1.5 rounded-xl border transition-all duration-300 ${
+                               isMyTurnNow 
+                                   ? 'bg-green-500 text-black border-green-400 shadow-[0_0_12px_rgba(34,197,94,0.3)] animate-pulse' 
+                                   : 'bg-zinc-800/80 text-zinc-300 border-white/5'
+                           }`}>
                                {myTime}
                            </div>
                        ) : (
-                           <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Unlimited</div>
+                           <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider bg-black/40 px-2 py-1 rounded-lg border border-white/5">Unlimited</div>
                        )}
                        
-                       {/* Draw Offer Button - ALWAYS visible when active game is ongoing */}
+                       {/* Draw Offer Button - ALWAYS visible, premium high-contrast style */}
                        {onOfferDraw && !game.isGameOver() && (
                            <button 
                                onClick={onOfferDraw}
-                               className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-white/10 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 active:scale-95"
+                               className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 hover:text-white border border-white/10 hover:border-white/20 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 active:scale-95 shadow-md"
                            >
                                🤝 Offer Draw
                            </button>
