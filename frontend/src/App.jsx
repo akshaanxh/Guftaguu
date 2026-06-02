@@ -846,12 +846,66 @@ function ChatInterface({ displayName, onLogout }) {
         )}
 
         {status === "idle" && (
-            <div className="text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <h2 className="text-5xl md:text-8xl font-display font-bold mb-6 tracking-tighter text-creative-hero">
+            <div className="text-center animate-in fade-in slide-in-from-bottom-8 duration-700 w-full max-w-3xl mx-auto px-4 py-6">
+
+                {/* Live badge */}
+                <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold mb-8 tracking-wide">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    {idleCount} {idleCount === 1 ? 'stranger' : 'strangers'} waiting right now
+                </div>
+
+                {/* Headline */}
+                <h2 className="text-5xl md:text-8xl font-display font-bold mb-5 tracking-tighter text-creative-hero">
                     Talk to <span className="text-creative-glow">Strangers.</span>
                 </h2>
-                <p className="text-zinc-400 mb-10 text-lg max-w-md mx-auto">Anonymous chat. Real-time games. No login required.</p>
-                <GlowButton onClick={handleStartChat} className="text-xl px-10 py-4 mx-auto font-creative-button">Start Chatting</GlowButton>
+
+                {/* Tagline */}
+                <p className="text-zinc-500 mb-10 text-base md:text-lg max-w-sm mx-auto leading-relaxed">
+                    Anonymous chat. Real-time games. No login required.
+                </p>
+
+                {/* CTA with glow aura */}
+                <div className="relative inline-flex mb-12">
+                    <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl scale-110 pointer-events-none"></div>
+                    <GlowButton onClick={handleStartChat} className="relative text-lg md:text-xl px-12 py-4 mx-auto font-creative-button">
+                        Start Chatting →
+                    </GlowButton>
+                </div>
+
+                {/* Feature pills */}
+                <div className="flex flex-wrap gap-2 justify-center mb-10">
+                    {[
+                        { icon: '💬', label: 'Anonymous' },
+                        { icon: '♟️', label: 'Chess' },
+                        { icon: '❌⭕', label: 'Tic-Tac-Toe' },
+                        { icon: '🔴🟡', label: 'Connect 4' },
+                        { icon: '⚡', label: 'Reaction' },
+                        { icon: '🛡️', label: 'Moderation' },
+                    ].map(({ icon, label }) => (
+                        <span key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 cursor-default select-none">
+                            <span>{icon}</span> {label}
+                        </span>
+                    ))}
+                </div>
+
+                {/* Mini feature cards */}
+                <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto">
+                    {[
+                        { emoji: '🗣️', title: 'Instant Match', sub: 'No waiting, no swiping' },
+                        { emoji: '🎮', title: 'Live Games', sub: 'Play while you chat' },
+                        { emoji: '🔒', title: '100% Private', sub: 'Zero data stored' },
+                    ].map(({ emoji, title, sub }) => (
+                        <div key={title} className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 hover:bg-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-default">
+                            <div className="text-2xl mb-2">{emoji}</div>
+                            <div className="text-xs font-bold text-zinc-300">{title}</div>
+                            <div className="text-[10px] text-zinc-600 mt-1 leading-relaxed">{sub}</div>
+                        </div>
+                    ))}
+                </div>
+
             </div>
         )}
 
@@ -1038,38 +1092,74 @@ const LegalScreen = ({ onAgree }) => {
     const [checked, setChecked] = useState(false);
     return (
         <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative z-10 overflow-hidden">
-            <CatLogo className="w-24 h-24 mb-8" />
+            {/* Soft Ambient Orbs */}
+            <div className="absolute top-10 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
+            <div className="absolute bottom-10 right-10 w-72 h-72 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
+            
+            {/* Header section with interactive logo */}
+            <div className="relative group mb-6 flex flex-col items-center">
+                <div className="absolute inset-0 bg-white/5 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                <CatLogo className="w-24 h-24 relative z-10 transition-all duration-500 ease-out group-hover:scale-110 group-hover:rotate-3" />
+            </div>
+            
             <h1 className="text-5xl md:text-7xl font-display font-bold mb-4 tracking-tighter text-creative-hero">Guftaguu</h1>
-            <p className="text-zinc-400 mb-12 text-center max-w-lg">A safe, anonymous space to connect, chat, and play.</p>
+            <p className="text-zinc-400 mb-12 text-center max-w-lg">A safe, anonymous space to connect, chat, and play games.</p>
+            
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl w-full mb-12">
-                <GlassCard className="p-6 hover:border-white/20 transition duration-300">
-                    <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4 text-blue-400"><Shield size={20} /></div>
-                    <h3 className="font-creative-title text-gradient-silver text-lg mb-2">Privacy First</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed">No logs. No tracking. No registration. Your conversations vanish when you leave.</p>
-                    <Link to="/privacy" className="text-xs text-white underline mt-4 block">Read Policy</Link>
+                {/* Privacy Card */}
+                <GlassCard className="p-6 hover:border-blue-500/30 hover:shadow-[0_15px_30px_rgba(59,130,246,0.12)] transition-all duration-500 flex flex-col justify-between">
+                    <div>
+                        <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                            <Shield size={22} />
+                        </div>
+                        <h3 className="font-creative-title text-gradient-silver text-xl mb-2">Privacy First</h3>
+                        <p className="text-sm text-zinc-400 leading-relaxed">No logs. No tracking. No registration. Your conversations vanish permanently when you leave.</p>
+                    </div>
+                    <Link to="/privacy" className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 hover:bg-blue-500 hover:text-white hover:shadow-[0_0_15px_rgba(59,130,246,0.4)] transition-all duration-300 mt-5 w-fit">
+                        Read Policy <Zap size={11} className="opacity-70" />
+                    </Link>
                 </GlassCard>
-                <GlassCard className="p-6 hover:border-white/20 transition duration-300">
-                    <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4 text-purple-400"><FileText size={20} /></div>
-                    <h3 className="font-creative-title text-gradient-silver text-lg mb-2">Community Rules</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed">Be kind. Harassment, hate speech, and inappropriate content are strictly banned.</p>
-                    <Link to="/terms" className="text-xs text-white underline mt-4 block">Terms of Service</Link>
+                
+                {/* Rules Card */}
+                <GlassCard className="p-6 hover:border-purple-500/30 hover:shadow-[0_15px_30px_rgba(168,85,247,0.12)] transition-all duration-500 flex flex-col justify-between">
+                    <div>
+                        <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                            <FileText size={22} />
+                        </div>
+                        <h3 className="font-creative-title text-gradient-silver text-xl mb-2">Community Rules</h3>
+                        <p className="text-sm text-zinc-400 leading-relaxed">Be kind. Harassment, hate speech, spamming, and inappropriate content are strictly banned.</p>
+                    </div>
+                    <Link to="/terms" className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500 hover:text-white hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all duration-300 mt-5 w-fit">
+                        Terms of Service <Zap size={11} className="opacity-70" />
+                    </Link>
                 </GlassCard>
-                <GlassCard className="p-6 hover:border-white/20 transition duration-300">
-                    <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mb-4 text-green-400"><Info size={20} /></div>
-                    <h3 className="font-creative-title text-gradient-silver text-lg mb-2">About Us</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed">Built for connection. Play games like Tic-Tac-Toe and Connect 4 while you chat.</p>
-                    <Link to="/about" className="text-xs text-white underline mt-4 block">Learn More</Link>
+                
+                {/* About Card */}
+                <GlassCard className="p-6 hover:border-green-500/30 hover:shadow-[0_15px_30px_rgba(34,197,94,0.12)] transition-all duration-500 flex flex-col justify-between">
+                    <div>
+                        <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-4 text-green-400 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+                            <Info size={22} />
+                        </div>
+                        <h3 className="font-creative-title text-gradient-silver text-xl mb-2">About Us</h3>
+                        <p className="text-sm text-zinc-400 leading-relaxed">Built for genuine connection. Play games like Chess, Tic-Tac-Toe and Connect 4 while you chat.</p>
+                    </div>
+                    <Link to="/about" className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full bg-green-500/10 border border-green-500/20 text-green-300 hover:bg-green-500 hover:text-white hover:shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all duration-300 mt-5 w-fit">
+                        Learn More <Zap size={11} className="opacity-70" />
+                    </Link>
                 </GlassCard>
             </div>
+            
             <div className="flex flex-col items-center gap-6">
                 <label className="flex items-center gap-3 cursor-pointer group select-none">
-                    <div className={`w-6 h-6 border-2 rounded transition flex items-center justify-center ${checked ? 'bg-white border-white' : 'border-zinc-600 group-hover:border-white'}`}>
-                        {checked && <CheckCircle size={14} className="text-black" />}
+                    <div className={`w-6 h-6 border-2 rounded-lg transition-all duration-300 flex items-center justify-center ${checked ? 'bg-gradient-to-r from-indigo-500 to-purple-500 border-transparent shadow-[0_0_12px_rgba(168,85,247,0.5)]' : 'border-zinc-600 group-hover:border-white'}`}>
+                        {checked && <CheckCircle size={14} className="text-white" />}
                     </div>
                     <input type="checkbox" className="hidden" onChange={(e) => setChecked(e.target.checked)} />
-                    <span className="text-zinc-300 group-hover:text-white transition">I agree to the Rules & Privacy Policy</span>
+                    <span className="text-zinc-300 group-hover:text-white transition duration-200 text-sm">I agree to the Rules & Privacy Policy</span>
                 </label>
-                <GlowButton onClick={onAgree} disabled={!checked} className="w-64">Continue</GlowButton>
+                <GlowButton onClick={onAgree} disabled={!checked} className={`w-64 font-creative-button transition-all duration-500 ${checked ? 'bg-white text-black shadow-[0_0_25px_rgba(255,255,255,0.5)] hover:scale-105' : 'bg-zinc-800 text-zinc-500 border border-white/5'}`}>
+                    Continue
+                </GlowButton>
             </div>
         </div>
     );
@@ -1080,42 +1170,169 @@ const NameScreen = ({ onStart }) => {
     
     return (
         <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative z-10 overflow-hidden">
-            <GlassCard className="w-full max-w-lg p-10 text-center relative z-10">
-                <CatLogo className="w-20 h-20 mx-auto mb-6" />
-                <h2 className="text-3xl font-display font-bold mb-2 tracking-tight uppercase text-gradient-silver">Welcome</h2>
-                <p className="text-zinc-400 mb-8">Choose a display name to begin.</p>
-                <input type="text" placeholder="Enter your name..." className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-4 text-center text-white text-lg focus:outline-none focus:border-white/50 transition mb-6 placeholder:text-zinc-700 font-medium" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && onStart(name)}/>
-                <GlowButton onClick={() => name.trim() && onStart(name)} className="w-full font-creative-button">Start Chatting</GlowButton>
+            {/* Soft Ambient Orbs */}
+            <div className="absolute top-10 right-10 w-80 h-80 bg-indigo-500/10 rounded-full blur-[90px] pointer-events-none animate-pulse" style={{ animationDuration: '7s' }} />
+            <div className="absolute bottom-10 left-10 w-80 h-80 bg-purple-500/10 rounded-full blur-[90px] pointer-events-none animate-pulse" style={{ animationDuration: '9s' }} />
+
+            <GlassCard className="w-full max-w-lg p-10 text-center relative z-10 hover:border-white/15 transition-all duration-500 hover:shadow-[0_20px_40px_rgba(168,85,247,0.08)]">
+                <div className="relative group mb-6 inline-block mx-auto">
+                    <div className="absolute inset-0 bg-white/5 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                    <CatLogo className="w-20 h-20 relative z-10 transition-all duration-500 ease-out group-hover:scale-110 group-hover:rotate-3" />
+                </div>
+                <h2 className="text-4xl font-display font-bold mb-2 tracking-tight uppercase text-creative-hero">Welcome</h2>
+                <p className="text-zinc-400 mb-8 text-sm">Choose a display name to begin.</p>
+                
+                <input 
+                    type="text" 
+                    placeholder="Enter your name..." 
+                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-4 text-center text-white text-lg focus:outline-none focus:border-white/30 focus:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-300 mb-6 placeholder:text-zinc-700 font-medium" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)} 
+                    onKeyDown={(e) => e.key === 'Enter' && name.trim() && onStart(name)}
+                />
+                
+                <GlowButton 
+                    onClick={() => name.trim() && onStart(name)} 
+                    disabled={!name.trim()} 
+                    className={`w-full font-creative-button transition-all duration-500 ${name.trim() ? 'bg-white text-black shadow-[0_0_25px_rgba(255,255,255,0.4)] hover:scale-[1.02]' : 'bg-zinc-800 text-zinc-500 border border-white/5'}`}
+                >
+                    Start Chatting
+                </GlowButton>
             </GlassCard>
-            <footer className="mt-12 text-xs text-zinc-600 flex gap-6 items-center">
-                <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
-                <Link to="/terms" className="hover:text-white transition">Terms</Link>
-            </footer>
             
+            <footer className="mt-12 text-xs text-zinc-500 flex gap-4 items-center bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md">
+                <Link to="/privacy" className="hover:text-white transition duration-200">Privacy Policy</Link>
+                <div className="w-1.5 h-1.5 bg-zinc-700 rounded-full" />
+                <Link to="/terms" className="hover:text-white transition duration-200">Terms of Service</Link>
+            </footer>
         </div>
     );
 };
 
-const StaticPage = ({ title, content }) => (
-    <div className="min-h-screen text-white p-10 relative z-10">
-        <Link to="/" className="text-zinc-400 hover:text-white mb-8 inline-flex items-center gap-2 font-creative-title text-sm uppercase tracking-wider transition-colors duration-200">← Back to Home</Link>
-        <h1 className="text-5xl md:text-6xl font-display font-bold mb-8 tracking-tighter text-creative-hero">{title}</h1>
-        <div className="max-w-3xl text-zinc-300 space-y-4">
-            {content.split('\n').map((line, index) => {
-                if (!line.trim()) return <br key={index} />;
-                const parts = line.split(/(\*\*.*?\*\*)/g);
+const StaticPage = ({ title, content }) => {
+    const renderContent = (text) => {
+        return text.split('\n').map((line, index) => {
+            const trimmed = line.trim();
+            if (!trimmed) return <div key={index} className="h-4" />;
+            
+            // Subheadings
+            if (trimmed.startsWith('### ')) {
+                return <h3 key={index} className="text-xl font-bold text-white mt-6 mb-3 tracking-tight flex items-center gap-2">{trimmed.replace('### ', '')}</h3>;
+            }
+            
+            // Bullet points
+            if (trimmed.startsWith('- ')) {
+                const bulletText = trimmed.replace('- ', '');
+                const parts = bulletText.split(/(\*\*.*?\*\*)/g);
                 return (
-                    <p key={index} className="leading-relaxed">{parts.map((part, i) => { if (part.startsWith('**') && part.endsWith('**')) { return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>; } return part; })}</p>
+                    <li key={index} className="ml-4 list-disc text-zinc-300 leading-relaxed pl-1 mb-1.5">
+                        {parts.map((part, i) => {
+                            if (part.startsWith('**') && part.endsWith('**')) {
+                                return <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
+                            }
+                            return part;
+                        })}
+                    </li>
                 );
-            })}
+            }
+            
+            // Standard paragraph
+            const parts = trimmed.split(/(\*\*.*?\*\*)/g);
+            return (
+                <p key={index} className="text-zinc-300 leading-relaxed mb-3">
+                    {parts.map((part, i) => {
+                        if (part.startsWith('**') && part.endsWith('**')) {
+                            return <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
+                        }
+                        return part;
+                    })}
+                </p>
+            );
+        });
+    };
+
+    return (
+        <div className="min-h-screen text-white flex flex-col items-center justify-start py-12 px-6 relative z-10">
+            {/* Ambient Background Glows */}
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+            <div className="w-full max-w-3xl">
+                <Link to="/" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-all mb-8 group bg-white/5 px-4 py-2 rounded-full border border-white/10 hover:border-white/20">
+                    <span className="group-hover:-translate-x-1 transition-transform">←</span> Back to Home
+                </Link>
+
+                <GlassCard className="p-8 md:p-12 border border-white/10 rounded-3xl relative overflow-hidden">
+                    {/* Decorative Corner Glow */}
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-bl-full pointer-events-none" />
+                    
+                    <h1 className="text-4xl md:text-5xl font-display font-bold mb-6 tracking-tighter text-creative-hero">{title}</h1>
+                    
+                    <div className="space-y-2">
+                        {renderContent(content)}
+                    </div>
+                </GlassCard>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const PAGE_CONTENT = {
-    privacy: `**1. No Personal Data Collection**\nGuftaguu is designed to be completely anonymous. We do not ask for your email, phone number, or real name. We do not track your location.\n\n**2. No Chat Logs**\nYour conversations are peer-to-peer. Once you disconnect from a chat, the messages are deleted from your browser and are not stored in any permanent database on our servers.\n\n**3. Temporary Data**\nWe use "Local Storage" on your device only to remember your Display Name so you don't have to type it every time. You can clear this by clearing your browser cache.\n\n**4. Data Security**\nWhile we do not store chats, please remember that you are talking to strangers. Do not share personal information (like your address, passwords, or financial details) with anyone. We are not responsible for information you voluntarily share.`,
-    terms: `**1. Acceptance of Terms**\nBy using Guftaguu, you agree to these terms. If you do not agree, please do not use the service. You must be 18+ to use this site.\n\n**2. User Conduct**\nWe have a zero-tolerance policy for:\n- Harassment, bullying, or hate speech.\n- Sharing illegal content or pornography.\n- Spamming or advertising.\n- Attempting to bypass bans.\n\n**3. Account Termination**\nWe reserve the right to ban users who violate these rules. Bans are based on IP address and device fingerprints.\n\n**4. Disclaimer**\nGuftaguu is provided "as is". We are not responsible for the conduct of any user. Interactions with strangers are at your own risk.`,
-    about: `**What is Guftaguu?**\nGuftaguu (meaning "Conversation") is a modern space to meet random people from around the world. In an age of social media algorithms, we bring back the excitement of spontaneous connection.\n\n**Our Mission**\nTo provide a fast, safe, and fun environment where you can be yourself (or whoever you want to be) without the pressure of profiles, likes, or followers.\n\n**Features**\n- ⚡ **Instant Matching:** No swiping, just chatting.\n- 🎮 **Live Games:** Play Tic-Tac-Toe, Connect 4, and Rock Paper Scissors directly in the chat.\n- 🛡️ **Safety Tools:** Built-in blocking and reporting systems to keep the community clean.\n\n*Contact*\nHave a suggestion? Use the "Report" button in the app header to send feedback directly to our dev team.`
+    privacy: `### 1. Absolute Privacy & P2P Design
+Guftaguu is architected from the ground up to respect your digital sovereignty.
+- **Zero Registration:** No email addresses, phone numbers, social logins, or verification processes are required.
+- **Anonymous Session:** Your transient identity is confined purely to your active session.
+- **Direct P2P Connectivity:** Text, video, and actions are routed through secure, real-time WebSockets directly, leaving no trail.
+
+### 2. No Data Archival or Logging
+We believe in a web where actions don't leave permanent records.
+- **No Database Persistence:** Chat histories and conversations are never stored on any physical disk or cloud server.
+- **Instant Erasure:** As soon as you hit disconnect or close your tab, all messages instantly evaporate from memory.
+- **No IP Tracking:** While IP addresses are temporarily used by WebSockets to negotiate connection handshakes, we do not log or store them.
+
+### 3. Lightweight Client Storage
+To provide a smooth web experience, we store minimal state in your local browser space.
+- **Display Name:** We remember your chosen username in browser "Local Storage" purely as a convenience.
+- **Zero Tracking Cookies:** We do not employ third-party tracking scripts, advertising networks, or retargeting pixels.
+
+### 4. Safety & Responsible Sharing
+Guftaguu offers a private canvas, but your security is a shared responsibility.
+- **Protect Your Identity:** Never share financial details, home addresses, real names, passwords, or personal credentials.
+- **No Undo:** Once you transmit personal info to a peer, it cannot be recalled. Be vigilant and chat safely.`,
+    terms: `### 1. Agreement of Conduct
+By entering Guftaguu, you enter a community of real individuals. We mandate high mutual respect.
+- **Eligibility:** You must be 18 years of age or older, or the age of legal majority in your jurisdiction, to utilize this platform.
+- **Express Agreement:** Use of the service implies full adherence to these terms and the companion Privacy Policy.
+
+### 2. Zero-Tolerance Safety Protocol
+To keep Guftaguu clean, safe, and fun, the following behaviors lead to permanent exclusion:
+- **Harassment & Bullying:** Threatening, toxic, or abusive behavior towards peers is strictly forbidden.
+- **Hate Speech:** Discrimination based on race, gender, sexual orientation, religion, nationality, or disability is banned.
+- **Illegal Contents:** Distributing copyrighted materials, spam, malicious URLs, pornographic imagery, or illegal materials.
+- **Bypass Attempts:** Bypassing automated restrictions, server bans, or attempting to compromise platform integrity.
+
+### 3. Immediate Account Termination
+We enforce immediate bans on violators.
+- **Heuristic Moderation:** We use localized device finger-printing and connection monitoring to block harmful actors instantly.
+- **No Liability for Bans:** The development team reserves full authority to terminate connections without prior warning.
+
+### 4. Limited Liability Disclaimer
+Guftaguu is provided strictly on an "as-is" and "as-available" basis.
+- **Personal Risk:** Your conversations and games with strangers are conducted solely at your own risk.
+- **No Warranties:** We make no guarantees regarding platform uptime, network reliability, or the behavioral conduct of peers.`,
+    about: `### Spontaneous Human Connection
+Guftaguu (meaning "Conversation" or "Dialogue" in Urdu/Hindi) is a dedicated digital sanctuary built to revive the thrill of spontaneous, unchoreographed connection. In a world dominated by social media algorithms, curations, and profiles, we welcome back the joy of absolute anonymity.
+
+### Our Core Pillars
+- ⚡ **Instant Synergy:** No swipes, no filters, no profiles. Hit search and enter a new world with a real stranger in milliseconds.
+- 🎮 **Social Gaming:** Break the ice naturally with built-in multiplayer games. Play Chess, Connect 4, and Tic-Tac-Toe without leaving your conversation.
+- 🔒 **Ironclad Anonymity:** We believe your privacy is non-negotiable. Enjoy full protection with zero registration and zero logs.
+
+### Empowering Your Experience
+Guftaguu is constructed with high-performance real-time web tech (Node.js, WebSockets, React). It is crafted for swift performance and absolute clarity.
+
+### Feedback & Collaboration
+Spotted a bug or have a feature suggestion? Use the report or feedback system in the interface header to send a message directly to our core developer guild. Let's make the internet conversational again!`
 };
 
 function App() {
