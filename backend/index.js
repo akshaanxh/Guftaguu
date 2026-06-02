@@ -32,7 +32,7 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     },
     // ADD THESE CRITICAL SETTINGS
-    pingTimeout: 30000,    // How long to wait for pong before considering connection dead
+    pingTimeout: 60000,    // How long to wait for pong before considering connection dead
     pingInterval: 10000,   // How often to send ping packets
     upgradeTimeout: 10000,
     transports: ['websocket', 'polling'] // Allow fallback to polling if websocket fails
@@ -243,7 +243,7 @@ io.on('connection', (socket) => {
             
             const roomId = userRooms[myUserId];
             if (roomId) {
-                console.log(`⏳ User ${myUserId} disconnected from room ${roomId}. Starting 12s reconnection window...`);
+                console.log(`⏳ User ${myUserId} disconnected from room ${roomId}. Starting 60s reconnection window...`);
                 socket.to(roomId).emit('partner_status_change', { status: 'disconnected' });
 
                 if (user.disconnectTimer) clearTimeout(user.disconnectTimer);
@@ -268,7 +268,7 @@ io.on('connection', (socket) => {
                     if (partnerUserId) {
                         await redis.lrem('waiting_queue', 0, partnerUserId);
                     }
-                }, 12000); // 12 seconds grace period
+                }, 60000); // 60 seconds — covers tab switches & brief network drops
             } else {
                 // Not in a room, clean up immediately
                 await redis.lrem('waiting_queue', 0, myUserId);

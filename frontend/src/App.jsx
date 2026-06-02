@@ -29,7 +29,7 @@ const GlassCard = ({ children, className = "" }) => (
 );
 
 const CatLogo = ({ className = "w-12 h-12" }) => (
-  <img src="/website%20icon.png" alt="Guftaguu Logo" className={`object-contain ${className}`} />
+  <img src="/guftaguulogo.png" alt="Guftaguu Logo" className={`object-contain ${className}`} />
 );
 
 const GlowButton = ({ onClick, children, disabled, variant = "primary", className="" }) => {
@@ -185,6 +185,7 @@ function ChatInterface({ displayName, onLogout }) {
   const socketRef = useRef();
   const messagesEndRef = useRef(null);
   const isSenderRef = useRef(false);
+  const roomIdRef = useRef(null); // Always holds the latest roomId — safe to read inside stale socket closures
   const [isReconnecting, setIsReconnecting] = useState(false);
   // State
   const [idleCount, setIdleCount] = useState(1); 
@@ -240,10 +241,20 @@ function ChatInterface({ displayName, onLogout }) {
 
   // Sync auth roomId when it changes
   useEffect(() => {
+      roomIdRef.current = roomId; // Keep ref in sync for socket handlers
       if (socketRef.current && socketRef.current.auth) {
           socketRef.current.auth.roomId = roomId;
       }
   }, [roomId]);
+
+  // Persist chat to sessionStorage on every message change.
+  // sessionStorage survives page reload but clears when the tab is closed —
+  // so the privacy promise ("messages gone when you leave") is still honoured.
+  useEffect(() => {
+      if (roomId && messages.length > 0) {
+          sessionStorage.setItem(`guftaguu_chat_${roomId}`, JSON.stringify(messages));
+      }
+  }, [messages, roomId]);
 
   useEffect(() => {
     // --- FIXED CONNECTION LOGIC ---
@@ -333,6 +344,8 @@ function ChatInterface({ displayName, onLogout }) {
 
     // ===== EXISTING EVENT HANDLERS =====
     socket.on('match_found', ({ roomId, partnerId }) => {
+        // Clear the previous room's persisted chat (fresh start)
+        if (roomIdRef.current) sessionStorage.removeItem(`guftaguu_chat_${roomIdRef.current}`);
         setStatus("chatting"); 
         setRoomId(roomId); 
         setPartnerId(partnerId); 
@@ -346,6 +359,11 @@ function ChatInterface({ displayName, onLogout }) {
 
     socket.on('rejoined_room', ({ roomId, partnerId, partnerName }) => {
         console.log(`✨ Rejoined active room: ${roomId}`);
+        // Restore persisted chat history so the reloaded user sees their messages again
+        try {
+            const saved = sessionStorage.getItem(`guftaguu_chat_${roomId}`);
+            if (saved) setMessages(JSON.parse(saved));
+        } catch (e) { console.warn('Could not restore chat history', e); }
         setRoomId(roomId);
         setPartnerId(partnerId);
         setPartnerName(partnerName);
@@ -377,7 +395,9 @@ function ChatInterface({ displayName, onLogout }) {
         setIsPartnerTyping(false);
     });
     
-    socket.on('partner_disconnected', () => { 
+    socket.on('partner_disconnected', () => {
+        // Chat is permanently over — clear persisted messages
+        if (roomIdRef.current) sessionStorage.removeItem(`guftaguu_chat_${roomIdRef.current}`);
         setStatus("partner_left"); 
         resetGame(); 
     });
@@ -523,14 +543,24 @@ function ChatInterface({ displayName, onLogout }) {
     // ===== CLEANUP =====
     return () => {
         clearInterval(heartbeatInterval);
-        socket.off(); // Remove listeners but keep socket alive if needed
-        // We do NOT disconnect here unless component unmounts for real
-        // But since displayName changes trigger this, we need to be careful.
-        // For this simple app, disconnecting on change is safer for logic, 
-        // BUT we removed forceNew, so reconnection is smoother.
-        socket.disconnect(); 
+        // Remove the visibility listener we added in this effect run
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        socket.off(); // Remove all socket listeners (they are re-registered on the next run)
+        // Do NOT disconnect the socket here. Re-renders caused by displayName changing
+        // should not kill the live connection. True disconnection is handled below.
     };
 }, [displayName]);
+
+  // Disconnect socket ONLY on true component unmount (user logs out / navigates away).
+  // Empty deps array guarantees this runs exactly once, on unmount.
+  useEffect(() => {
+      return () => {
+          if (socketRef.current) {
+              socketRef.current.disconnect();
+              socketRef.current = null;
+          }
+      };
+  }, []);
 
   // WIN CHECKER HOOK
   useEffect(() => {
@@ -574,7 +604,10 @@ function ChatInterface({ displayName, onLogout }) {
   }, [status]);
 
 
-  const resetAll = () => { setStatus("idle"); setMessages([]); resetGame(); setPartnerId(null); setPartnerName(null); };
+  const resetAll = () => {
+      if (roomIdRef.current) sessionStorage.removeItem(`guftaguu_chat_${roomIdRef.current}`);
+      setStatus("idle"); setMessages([]); resetGame(); setPartnerId(null); setPartnerName(null);
+  };
   const resetGame = () => { 
       isSenderRef.current = false;
       setGameActive(false); setIncomingRequest(null); setShowGameSelector(false);
@@ -624,7 +657,9 @@ function ChatInterface({ displayName, onLogout }) {
   };
 
   const handleDisconnectChat = () => { 
-      if (!roomId) return; 
+      if (!roomId) return;
+      // Clear persisted chat when the user intentionally leaves
+      sessionStorage.removeItem(`guftaguu_chat_${roomId}`);
       getSocket().emit('leave_room', { roomId }); 
       setStatus("disconnected"); 
       resetGame(); 
