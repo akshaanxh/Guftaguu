@@ -797,14 +797,14 @@ function ChatInterface({ displayName, onLogout }) {
         )}
 
         {incomingDrawOffer && (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] animate-in zoom-in-95 duration-200">
-                <GlassCard className="p-8 text-center max-w-sm">
-                    <div className="w-16 h-16 bg-zinc-800/80 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
+                <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 text-center w-full max-w-sm shadow-2xl">
+                    <div className="w-16 h-16 bg-zinc-800 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
                         🤝
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">Draw Offered</h3>
-                    <p className="text-zinc-400 mb-8">Stranger wants to end the game in a draw. Do you accept?</p>
-                    <div className="flex gap-3 justify-center">
+                    <h3 className="text-2xl font-bold mb-3">Draw Offered</h3>
+                    <p className="text-zinc-400 mb-7 text-sm leading-relaxed">Stranger wants to end the game in a draw. Do you accept?</p>
+                    <div className="flex gap-3 justify-center flex-wrap">
                         <GlowButton variant="primary" onClick={() => {
                             if (roomId) { getSocket().emit('accept_draw', { roomId }); setIncomingDrawOffer(false); }
                         }}>Yes, Draw 🤝</GlowButton>
@@ -812,7 +812,7 @@ function ChatInterface({ displayName, onLogout }) {
                             if (roomId) { getSocket().emit('decline_draw', { roomId }); setIncomingDrawOffer(false); }
                         }}>No, Continue</GlowButton>
                     </div>
-                </GlassCard>
+                </div>
             </div>
         )}
 
