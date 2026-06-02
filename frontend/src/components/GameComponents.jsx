@@ -199,9 +199,6 @@ export const ChessBoardGame = ({
     statusMessage, 
     onGameEnd,
     onOfferDraw,
-    incomingDrawOffer,
-    onAcceptDraw,
-    onDeclineDraw,
     drawStatusMessage
 }) => {
     const [game, setGame] = useState(new Chess());
@@ -430,24 +427,6 @@ export const ChessBoardGame = ({
                   </div>
              )}
 
-             {/* DRAW OFFER DIALOG */}
-             {incomingDrawOffer && (
-                 <div className="absolute inset-0 bg-black/35 flex items-center justify-center z-35 rounded-xl backdrop-blur-[1.5px] animate-in fade-in duration-200">
-                     <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 text-center max-w-[260px] shadow-2xl">
-                         <div className="text-3xl mb-2">🤝</div>
-                         <h4 className="text-white font-bold text-base mb-1">Draw Offered</h4>
-                         <p className="text-zinc-400 text-[11px] mb-4 font-medium">Stranger is offering a draw. End the game peacefully?</p>
-                         <div className="flex gap-2.5 justify-center">
-                             <button onClick={onAcceptDraw} className="flex-1 bg-white text-black text-xs font-bold py-2 rounded-lg hover:bg-gray-200 transition active:scale-95">
-                                 Yes
-                             </button>
-                             <button onClick={onDeclineDraw} className="flex-1 bg-zinc-800 text-zinc-300 text-xs font-bold py-2 rounded-lg hover:bg-zinc-700 border border-white/5 transition active:scale-95">
-                                 No
-                             </button>
-                         </div>
-                     </div>
-                 </div>
-             )}
 
              <div className="w-full flex justify-between items-center mb-2 px-2 max-w-[250px] md:max-w-[320px]">
                   <h3 className="text-base md:text-xl font-creative-title font-bold text-white uppercase tracking-wider text-gradient-silver">Chess</h3>

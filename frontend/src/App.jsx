@@ -796,6 +796,26 @@ function ChatInterface({ displayName, onLogout }) {
             </div>
         )}
 
+        {incomingDrawOffer && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] animate-in zoom-in-95 duration-200">
+                <GlassCard className="p-8 text-center max-w-sm">
+                    <div className="w-16 h-16 bg-zinc-800/80 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
+                        🤝
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2">Draw Offered</h3>
+                    <p className="text-zinc-400 mb-8">Stranger wants to end the game in a draw. Do you accept?</p>
+                    <div className="flex gap-3 justify-center">
+                        <GlowButton variant="primary" onClick={() => {
+                            if (roomId) { getSocket().emit('accept_draw', { roomId }); setIncomingDrawOffer(false); }
+                        }}>Yes, Draw 🤝</GlowButton>
+                        <GlowButton variant="danger" onClick={() => {
+                            if (roomId) { getSocket().emit('decline_draw', { roomId }); setIncomingDrawOffer(false); }
+                        }}>No, Continue</GlowButton>
+                    </div>
+                </GlassCard>
+            </div>
+        )}
+
         {showGameSelector && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]" onClick={() => setShowGameSelector(false)}>
                 <GlassCard className="p-6 max-w-md w-full animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -865,19 +885,6 @@ function ChatInterface({ displayName, onLogout }) {
                                         setDrawStatusMessage("Draw offer sent...");
                                         setTimeout(() => setDrawStatusMessage(""), 2000);
                                         getSocket().emit('offer_draw', { roomId });
-                                    }
-                                }}
-                                incomingDrawOffer={incomingDrawOffer}
-                                onAcceptDraw={() => {
-                                    if (roomId) {
-                                        getSocket().emit('accept_draw', { roomId });
-                                        setIncomingDrawOffer(false);
-                                    }
-                                }}
-                                onDeclineDraw={() => {
-                                    if (roomId) {
-                                        getSocket().emit('decline_draw', { roomId });
-                                        setIncomingDrawOffer(false);
                                     }
                                 }}
                                 drawStatusMessage={drawStatusMessage}
