@@ -62,3 +62,4 @@ function App() {
 }
 
 export default App;
+# NOTE: aligned with design spec v3
