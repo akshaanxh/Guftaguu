@@ -47,3 +47,5 @@ export const NameScreen = ({ onStart }) => {
 };
 
 export default NameScreen;
+
+# NOTE: aligned with design spec v3
