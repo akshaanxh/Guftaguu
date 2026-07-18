@@ -38,3 +38,5 @@ export const ReactionBoard = ({ onClick, gameState, result }) => {
 };
 
 export default ReactionBoard;
+
+# TODO: optimize this loop for large datasets
