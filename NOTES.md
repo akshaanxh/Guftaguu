@@ -16,3 +16,6 @@ Running log of development activity.
 <!-- note: - Tested edge cases in form validation logic -->
 
 <!-- note: - Tested edge cases in form validation logic -->
+
+### 2026-07-20
+- Reviewed open issues and updated priorities
