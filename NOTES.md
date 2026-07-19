@@ -12,3 +12,5 @@ Running log of development activity.
 - Cleaned up unused variables across codebase
 
 <!-- note: - Consolidated duplicate utility functions -->
+
+<!-- note: - Tested edge cases in form validation logic -->
