@@ -88,3 +88,5 @@ Inside `/backend`, create a `.env` file:
 
 ## 🥂 **Enjoy using Guftaguu!**  
 Built for fun, curiosity, and maybe a little chaos.
+
+<!-- note: - Worked on reducing bundle size -->
