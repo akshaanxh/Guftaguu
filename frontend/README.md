@@ -18,3 +18,5 @@ If you are developing a production application, we recommend using TypeScript wi
 <!-- note: - Prototyped new component design -->
 
 <!-- note: - Tested edge cases in form validation logic -->
+
+<!-- note: - Reviewed module structure and planned next refactor -->
