@@ -90,3 +90,5 @@ Inside `/backend`, create a `.env` file:
 Built for fun, curiosity, and maybe a little chaos.
 
 <!-- note: - Worked on reducing bundle size -->
+
+<!-- note: - Prototyped new component design -->
