@@ -23,3 +23,5 @@ export const GlowButton = ({ onClick, children, disabled, variant = "primary", c
         </button>
     );
 };
+
+# TODO: add error boundary here
