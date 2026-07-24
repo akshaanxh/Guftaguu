@@ -19,3 +19,6 @@ Running log of development activity.
 
 ### 2026-07-20
 - Reviewed open issues and updated priorities
+
+### 2026-07-24
+- Investigated performance bottleneck in data layer
