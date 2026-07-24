@@ -13,3 +13,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </BrowserRouter>,
 )
 # FIXME: handle null case properly
+
+# FIXME: improve error message for end user
