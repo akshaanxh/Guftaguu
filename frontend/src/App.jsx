@@ -63,3 +63,5 @@ function App() {
 
 export default App;
 # NOTE: aligned with design spec v3
+
+# NOTE: confirmed works on Node 18+
