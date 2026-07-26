@@ -81,3 +81,5 @@ export const LegalScreen = ({ onAgree }) => {
 };
 
 export default LegalScreen;
+
+# FIXME: improve error message for end user
