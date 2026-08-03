@@ -53,9 +53,11 @@ const ConnectionStatusBanner = ({ isConnected, isReconnecting }) => {
     );
 };
 
-const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3001'
-    : 'https://guftaguu-backend.onrender.com';
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+// Socket.IO WebSocket server
+const SERVER_URL = isLocal ? 'http://localhost:3001' : 'https://guftaguu-backend.onrender.com';
+// REST API server (Spring Boot HTTP — port 3002 locally, same host in production)
+const API_URL = isLocal ? 'http://localhost:3002' : 'https://guftaguu-backend.onrender.com';
 
 export function ChatInterface({ displayName, onLogout }) {
   const socketRef = useRef();
@@ -528,7 +530,7 @@ export function ChatInterface({ displayName, onLogout }) {
   const handleNewMatch = () => { resetAll(); setStatus("searching"); getSocket().emit("find_match"); };
   const handleMainButton = () => { if (status === 'chatting') handleDisconnectChat(); else handleNewMatch(); };
   const handleBlock = () => { if (!roomId || !partnerId) return; if (window.confirm("Block user for 10 mins?")) { getSocket().emit('block_user', { roomId, partnerId }); resetAll(); alert("User blocked."); } };
-  const submitReport = async (e) => { e.preventDefault(); setIsSendingReport(true); try { await axios.post(`${SERVER_URL}/api/report`, reportData); alert("Sent!"); setShowReportModal(false); } catch (err) { alert("Failed."); } setIsSendingReport(false); };
+  const submitReport = async (e) => { e.preventDefault(); setIsSendingReport(true); try { await axios.post(`${API_URL}/api/report`, reportData); alert("Sent!"); setShowReportModal(false); } catch (err) { alert("Failed."); } setIsSendingReport(false); };
   const sendGameRequest = (gameType) => { 
       isSenderRef.current = true;
       setWaitingForResponse(true); 
