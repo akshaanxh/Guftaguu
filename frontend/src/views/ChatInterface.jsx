@@ -136,17 +136,12 @@ export function ChatInterface({ displayName, onLogout }) {
     // Connect to server
     if (!socketRef.current) {
         const currentUserId = getOrCreateUserId();
+        const connPayload = { userId: currentUserId, name: displayName };
+        if (roomId) connPayload.roomId = roomId;
+
         socketRef.current = io(SERVER_URL, {
-            auth: {
-                userId: currentUserId,
-                name: displayName,
-                roomId: roomId
-            },
-            query: {
-                userId: currentUserId,
-                name: displayName,
-                roomId: roomId
-            },
+            auth: connPayload,
+            query: connPayload,
             reconnection: true,
             reconnectionAttempts: 15,
             reconnectionDelay: 1000,
