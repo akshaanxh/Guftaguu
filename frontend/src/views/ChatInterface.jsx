@@ -134,10 +134,15 @@ export function ChatInterface({ displayName, onLogout }) {
 
   useEffect(() => {
     // Connect to server
-    if (!socketRef.current) {
+        const currentUserId = getOrCreateUserId();
         socketRef.current = io(SERVER_URL, {
             auth: {
-                userId: getOrCreateUserId(),
+                userId: currentUserId,
+                name: displayName,
+                roomId: roomId
+            },
+            query: {
+                userId: currentUserId,
                 name: displayName,
                 roomId: roomId
             },
