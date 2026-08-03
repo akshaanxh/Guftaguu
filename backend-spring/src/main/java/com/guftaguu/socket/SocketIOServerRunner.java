@@ -92,6 +92,10 @@ public class SocketIOServerRunner implements CommandLineRunner {
         if (name == null)         name         = client.getHandshakeData().getSingleUrlParam("name");
         if (clientRoomId == null) clientRoomId = client.getHandshakeData().getSingleUrlParam("roomId");
 
+        if ("null".equalsIgnoreCase(clientRoomId) || "undefined".equalsIgnoreCase(clientRoomId) || (clientRoomId != null && clientRoomId.isBlank())) {
+            clientRoomId = null;
+        }
+
         String initialName = (name != null && !name.isBlank()) ? name : "Stranger";
 
         if (userId != null && !userId.isBlank()) {
