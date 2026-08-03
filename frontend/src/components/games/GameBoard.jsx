@@ -48,4 +48,3 @@ export const GameBoard = ({ gameType, board, onMove, winner, mySymbol, isMyTurn,
 
 export default GameBoard;
 
-# TODO: optimize this loop for large datasets
