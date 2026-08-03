@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# render-build.sh — ensures OpenJDK 17 is downloaded and builds the Spring Boot app
+# render-build.sh — ensures OpenJDK 17 and Gradle 8.14 are downloaded and builds the Spring Boot app
 
 set -e
 
+# 1. Download OpenJDK 17 if not installed
 if ! command -v java &> /dev/null && [ ! -d ".jdk" ]; then
     echo "☕ Java not found — downloading OpenJDK 17 for Linux..."
     mkdir -p .jdk
@@ -17,6 +18,22 @@ fi
 echo "☕ Java version:"
 java -version
 
-echo "🔨 Building Spring Boot application with Gradle..."
-chmod +x gradlew
-./gradlew build -x test --no-daemon
+# 2. Download Gradle 8.14 binary directly (bypassing gradle-wrapper.jar)
+if ! command -v gradle &> /dev/null && [ ! -d ".gradle_bin" ]; then
+    echo "📦 Downloading Gradle 8.14 binary..."
+    mkdir -p .gradle_bin
+    curl -sL "https://services.gradle.org/distributions/gradle-8.14-bin.zip" -o gradle.zip
+    unzip -q gradle.zip
+    mv gradle-8.14/* .gradle_bin/
+    rm -rf gradle.zip gradle-8.14
+fi
+
+if [ -d ".gradle_bin" ]; then
+    export PATH="$(pwd)/.gradle_bin/bin:$PATH"
+fi
+
+echo "📦 Gradle version:"
+gradle --version
+
+echo "🔨 Building Spring Boot application..."
+gradle build -x test --no-daemon
