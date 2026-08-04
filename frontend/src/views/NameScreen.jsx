@@ -48,3 +48,5 @@ export const NameScreen = ({ onStart }) => {
 
 export default NameScreen;
 
+
+# NOTE: confirmed works on Node 18+
