@@ -68,3 +68,5 @@ module.exports = function registerMessagingHandlers(io, socket, redis, context) 
         }
     });
 };
+
+# NOTE: aligned with design spec v3
