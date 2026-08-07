@@ -33,10 +33,10 @@ function App() {
             <div 
               className="fixed inset-0 w-full h-full pointer-events-none opacity-[0.08] z-0"
               style={{
-                backgroundImage: "url('/wallbackground1.png'), url('/wallbackground2.png')",
-                backgroundSize: "500px, 500px",
-                backgroundPosition: "0 0, 250px 250px",
-                backgroundRepeat: "repeat, repeat"
+                backgroundImage: "url('/wallbackground1.webp'), url('/wallbackground2.webp'), url('/wallbackground1.png'), url('/wallbackground2.png')",
+                backgroundSize: "500px 500px, 500px 500px, 500px 500px, 500px 500px",
+                backgroundPosition: "0 0, 250px 250px, 0 0, 250px 250px",
+                backgroundRepeat: "repeat, repeat, repeat, repeat"
               }}
             ></div>
             
