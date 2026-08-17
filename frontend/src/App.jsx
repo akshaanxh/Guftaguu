@@ -29,12 +29,12 @@ function App() {
     
     return (
         <>
-            {/* Global Smooth Watermark Wall — Original smooth PNG assets */}
+            {/* Global Watermark Wall — Original Exact Config */}
             <div 
-              className="fixed inset-0 w-full h-full pointer-events-none opacity-[0.04] z-0"
+              className="fixed inset-0 w-full h-full pointer-events-none opacity-[0.08] z-0"
               style={{
                 backgroundImage: "url('/wallbackground1.png'), url('/wallbackground2.png')",
-                backgroundSize: "500px 500px, 500px 500px",
+                backgroundSize: "500px, 500px",
                 backgroundPosition: "0 0, 250px 250px",
                 backgroundRepeat: "repeat, repeat"
               }}
