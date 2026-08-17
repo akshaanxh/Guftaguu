@@ -103,4 +103,5 @@ export const SwipeableMessage = ({ msg, onReply }) => {
 
 export default SwipeableMessage;
 
-# TODO: improve test coverage here
+
+
