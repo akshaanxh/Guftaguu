@@ -2,25 +2,30 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Zap, FileText, Info, CheckCircle } from 'lucide-react';
 import { CatLogo, GlassCard, GlowButton } from '../components/ui';
+import { VisitorStatsWidget } from '../components/VisitorStatsWidget';
+import { CommunityNote } from '../components/CommunityNote';
 
 export const LegalScreen = ({ onAgree }) => {
     const [checked, setChecked] = useState(false);
     return (
-        <div className="min-h-screen text-white flex flex-col items-center justify-center p-6 relative z-10 overflow-hidden">
+        <div className="min-h-screen text-white flex flex-col items-center justify-center p-4 sm:p-6 relative z-10 overflow-y-auto py-12">
             {/* Soft Ambient Orbs */}
             <div className="absolute top-10 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
             <div className="absolute bottom-10 right-10 w-72 h-72 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
             
+            {/* Live Visitor Counter & Geolocation Badge */}
+            <VisitorStatsWidget className="mb-6" />
+
             {/* Header section with interactive logo */}
-            <div className="relative group mb-6 flex flex-col items-center">
+            <div className="relative group mb-4 flex flex-col items-center">
                 <div className="absolute inset-0 bg-white/5 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                <CatLogo className="w-24 h-24 relative z-10 transition-all duration-500 ease-out group-hover:scale-110 group-hover:rotate-3" />
+                <CatLogo className="w-20 h-20 relative z-10 transition-all duration-500 ease-out group-hover:scale-110 group-hover:rotate-3" />
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-display font-bold mb-4 tracking-tighter text-creative-hero">Guftaguu</h1>
-            <p className="text-zinc-400 mb-12 text-center max-w-lg">A safe, anonymous space to connect, chat, and play games.</p>
+            <h1 className="text-4xl md:text-6xl font-display font-bold mb-2 tracking-tighter text-creative-hero">Guftaguu</h1>
+            <p className="text-zinc-400 mb-8 text-center max-w-lg text-sm sm:text-base">A safe, anonymous space to connect, chat, and play games.</p>
             
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl w-full mb-12">
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl w-full mb-8">
                 {/* Privacy Card */}
                 <GlassCard className="p-6 hover:border-blue-500/30 hover:shadow-[0_15px_30px_rgba(59,130,246,0.12)] transition-all duration-500 flex flex-col justify-between">
                     <div>
@@ -50,7 +55,7 @@ export const LegalScreen = ({ onAgree }) => {
                 </GlassCard>
                 
                 {/* About Card */}
-                <GlassCard className="p-6 hover:border-green-500/30 hover:shadow-[0_15px_30px_rgba(34,197,94,0.12)] transition-all duration-500 flex flex-col justify-between">
+                <GlassCard className="p-6 hover:border-green-500/30 hover:shadow-[0_0_15px_rgba(34,197,94,0.12)] transition-all duration-500 flex flex-col justify-between">
                     <div>
                         <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-4 text-green-400 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
                             <Info size={22} />
@@ -64,7 +69,7 @@ export const LegalScreen = ({ onAgree }) => {
                 </GlassCard>
             </div>
             
-            <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center gap-5 mb-8">
                 <label className="flex items-center gap-3 cursor-pointer group select-none">
                     <div className={`w-6 h-6 border-2 rounded-lg transition-all duration-300 flex items-center justify-center ${checked ? 'bg-gradient-to-r from-indigo-500 to-purple-500 border-transparent shadow-[0_0_12px_rgba(168,85,247,0.5)]' : 'border-zinc-600 group-hover:border-white'}`}>
                         {checked && <CheckCircle size={14} className="text-white" />}
@@ -76,9 +81,11 @@ export const LegalScreen = ({ onAgree }) => {
                     Continue
                 </GlowButton>
             </div>
+
+            {/* Community Request Note */}
+            <CommunityNote />
         </div>
     );
 };
 
 export default LegalScreen;
-
